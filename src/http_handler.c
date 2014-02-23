@@ -19,8 +19,11 @@ static const char * methodStrings[] = {
 
 #define SHORTER(X,Y) (X<Y ? X : Y)
 
-/* Length of string offset using string start and length */
-#define OFFSET_LEN(START, LENGTH, OFFSET)   ((START+LENGTH) - (OFFSET))
+/* Length of string offset from end using string start and length */
+#define P_OFFSET_LEN(START, LENGTH, OFFSET)   ((START+LENGTH) - (OFFSET))
+
+/* TODO macro for pointer length via subtraction. */
+#define P_DIFF_LEN(BIGGER, SMALLER) (BIGGER - SMALLER + 1)
 
 #if 0
 static http_parser parser;
@@ -238,11 +241,12 @@ void registerControl(controlInformation * userControl)
 }
 
 
-/* Returns last character on line which is NOT either a CR LF */
+/* Returns first end of line character (i.e. if CRLF returns pointer to CR)*/
 static const char * getEndOfLine(const char * data, uint16_t size)
 {
     uint16_t index = 0;
 
+    /* N.B if already on CR need to still behave OK */
     while (index < size)
     {
         if (index + (HTTP_EOL_LEN-1) > size)
@@ -252,7 +256,7 @@ static const char * getEndOfLine(const char * data, uint16_t size)
 
         else if (strncmp(&data[index], HTTP_EOL_STR, HTTP_EOL_LEN) == 0)
         {
-            return &data[index];  /* just before CR  */
+            return &data[index];
         }
         index++;
     }
@@ -267,15 +271,18 @@ static const char * getNextLine(const char * data, uint16_t size)
 
     if (dataRtnd == NULL)
     {
-        return dataRtnd;
+        PRINT_LINE("getEndOfLine failed.");
+        return NULL;
     }
 
-    if ((dataRtnd + HTTP_EOL_LEN + 1) > (data + size - 1))
+    if ((dataRtnd + HTTP_EOL_LEN) > (data + size - 1))
     {
+        PRINT_LINE("Not enough room for EOL.");
         return NULL;
     }
     
-    return (dataRtnd += HTTP_EOL_LEN + 1);
+    PRINT_LINE("Should be returning success.");
+    return (dataRtnd += HTTP_EOL_LEN);
 }
 
 
@@ -359,7 +366,7 @@ static const char * parseHttpStartLine(const char * data,
     }
 
     /* Move over resource to version */
-    while((c+1) <= eol)
+    while((c+1) < eol)
     {
         if (*c == ' ')
         {
@@ -423,31 +430,108 @@ static const char * parseHttpStartLine(const char * data,
     par->resource.size = version - resource - HTTP_SPACE_LEN;
 
     /* Success */
-    return eol + HTTP_EOL_LEN; /* todo range */
+    return eol; /* todo range */
 }
 
 
+/* data is pointer to first byte on a new line */
 static const char * parseHttpHeaders(const char * data,
                                      uint16_t size,
                                      httpParser * par)
 {
-    if (size <= HTTP_EOL_LEN)
+    const char * const dataStart = data;
+    const char * headerFieldStart = NULL;
+    uint16_t headerFieldLength = 0;
+    const char * headerValueStart = NULL;
+    uint16_t headerValueLength = 0;
+    const char * lineStart = data;
+    const char * eol = getEndOfLine(data,size);
+
+    PRINT_LINE_ARGS("IN %s.", __FUNCTION__);
+    if (eol == NULL)
     {
+        PRINT_LINE("Couldn't find EOL");
         return NULL;
     }
 
-    if (strncmp(data, HTTP_EOL_STR, size) == 0)
+    /*TODO LOOP HERE FOR HEADERS */
+    if (P_DIFF_LEN(eol, data) <= HTTP_EOL_LEN)
     {
-        
+        PRINT_LINE("Data length too short to hold EOL characters.");
+        return NULL;
     }
-    /* loop */
-        /* Check for blank link */
-        /* Check for header name */
-        /* Check for colon */
-        /* Check for header value */
-    return NULL;
-}
 
+    while (P_DIFF_LEN(data, lineStart) <= size)
+    {
+        /* Check for blank line */
+        if (strncmp(data, HTTP_EOL_STR, P_DIFF_LEN(eol,data)) == 0)
+        {
+            return data;    /* pointer to newline seperating body */
+        }
+
+        /* Must be a header then. Get field. */
+        headerFieldStart = data;
+        while (data < eol) /* Ensure a byte for header value as well.*/
+        {
+            if (*data == ':')
+            {
+                headerFieldLength = (data-lineStart); /* Length to, not incl the colon */
+                break;
+            }
+            data++;
+        }
+
+        if (headerFieldLength == 0)
+        {
+            PRINT_LINE("headerFieldLength was zero.");
+            return NULL;
+        }
+        
+        /* c is still sitting on the colon */
+        if (data+2 < eol)
+        {
+            if (*(++data) != ' ')
+            {
+                PRINT_LINE("Space not present.");
+                return NULL;
+            }
+            data++;
+        }
+
+        /* c is on the header value */
+        headerValueStart = data;
+        headerValueLength = eol-data;   
+     
+        /* TODO now have headers */
+        if (headerValueStart == headerFieldStart &&
+            headerValueLength == headerFieldLength)
+        {
+            /* prevent compiler complaint for now */
+        }
+
+        PRINT_LINE_ARGS("ALAN DEBUG. Going to try to grab next line."
+                        "dataStart: %p size: %d eol: %p dataEnd %p", dataStart, size, eol, dataStart + size);
+
+        /*  TODO problem here. Need to identify when we hit CRLF seperating 
+         *  body e.g.*/
+        if (dataStart + size - 1 == (eol + HTTP_EOL_LEN + HTTP_EOL_LEN - 1))
+        {
+            break;
+        }
+        if ((lineStart = getNextLine(eol, P_OFFSET_LEN(dataStart, size, eol)))
+                == NULL)
+        {
+            return NULL;
+        }
+
+        if ((eol = getEndOfLine(lineStart, P_OFFSET_LEN(dataStart, size, lineStart))) == NULL)
+        {
+            return NULL;
+        }
+    }
+
+   return eol;/* TODO */
+}
 
 
 const char * parseHttp(httpParser * par, const char * data, uint16_t size, void * user)
@@ -480,14 +564,16 @@ const char * parseHttp(httpParser * par, const char * data, uint16_t size, void 
         return NULL;
     }
     
-    dataRtnd = getNextLine(dataRtnd, OFFSET_LEN(data, size, dataRtnd));
-    if (dataRtnd == NULL)
+    else if ((dataRtnd = getNextLine(dataRtnd, P_OFFSET_LEN(data, size, 
+                                                          dataRtnd))) == NULL)
     {
+        PRINT_LINE("getNextLine failed.");
         return NULL;
     }
 
-    if ((dataRtnd = parseHttpHeaders(dataRtnd, OFFSET_LEN(data, size, dataRtnd),
-                                     par)) == NULL)
+    else if ((dataRtnd = parseHttpHeaders(dataRtnd,
+                                          P_OFFSET_LEN(data, size, dataRtnd),
+                                          par)) == NULL)
     {
         PRINT_LINE("Parse Headers Failed.");
         return NULL;

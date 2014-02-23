@@ -61,6 +61,16 @@ static const char * startLinesInvalid[] = {
     "DELETE /robots.txt HTTP/0.9 \r"
 };
 
+static const char * headersValid[] = {
+    "DELETE /robots.txt HTTP/0.9 \r\n"
+    "HEADER VALUE: HEADER FIELD\r\n"
+    "\r\n",
+    "DELETE /robots.txt HTTP/0.9 \r\n"
+    "HEADER VALUE: HEADER FIELD\r\n"
+    "HEADER VALUE: HEADER FIELD\r\n"
+    "\r\n"
+};
+
 
 static httpParser startLineDataValid[] = {
     {   GET, 
@@ -255,6 +265,19 @@ static int test_startLinesInvalid(void)
     return 1;
 }
 
+static int test_headersValid(void)
+{
+    int index;
+    httpParser par;
+    const char * rtn = NULL;
+    for (index = 0; index<2; index++)
+    {
+        rtn = parseHttp(&par, headersValid[index], strlen(headersValid[index]), NULL);
+        ERROR_CHECK(rtn == NULL,"RTN was NULL");
+    }
+    return 1;
+}
+
 
 int main(void) 
 {
@@ -274,6 +297,7 @@ int main(void)
 
     test_startLinesValid();
     test_startLinesInvalid();
+    test_headersValid();
     test_print(&testData);
 }
 
