@@ -1,16 +1,20 @@
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
 
-#define DEVICE_NAME_SIZE            15
-#define RESOURCE_NAME_SIZE          20
+#define MAX_RESOURCES               4   /* Per control */
+#define MAX_METHODS                 4   /* Per resource */
+
+#define MAX_HEADERS                 10  /* Maximum stored headers */
+
+#define MAX_DEVICE_NAME_SIZE        15
+#define MAX_RESOURCE_NAME_SIZE      20
 
 #define RECEIVE_BUFFER_SIZE         1024
 #define RECEIVE_BUFFER_LAST_INDEX   (RECEIVE_BUFFER_SIZE - 1)
 
 #define TRANSMIT_BUFFER_SIZE        1024
 
-#define MAX_RESOURCES               4   /* Per control */
-#define MAX_METHODS                 4   /* Per resource */
 
 #define HTTP_EOL_STR                "\r\n"
 #define HTTP_EOL_LEN                2
@@ -24,21 +28,21 @@
 
 #define HTTP_RESOURCE_START_CHAR    '/'
 
-#define PRINT_MESSAGES              FALSE
+#define PRINT_MESSAGES              false
 
-#if PRINT_MESSAGES == TRUE  
-    #define PRINT(STR, ...) \
+#if defined(HTTP_PRINT_MESSAGES) && HTTP_PRINT_MESSAGES == true  
+    #define HTTP_PRINT(STR, ...) \
         printf(STR, __VA_ARGS__)
     
-    #define PRINT_LINE(STR) \
+    #define HTTP_PRINT_LINE(STR) \
         printf("(%s %s:%d) " STR "\r\n", __FUNCTION__, __FILE__, __LINE__)
     
-    #define PRINT_LINE_ARGS(STR, ...) \
+    #define HTTP_PRINT_LINE_ARGS(STR, ...) \
         printf("(%s %s:%d): " STR "\r\n", __FUNCTION__, __FILE__, __LINE__, __VA_ARGS__)
 #else
-    #define PRINT(...) 
-    #define PRINT_LINE(...) 
-    #define PRINT_LINE_ARGS(...) 
+    #define HTTP_PRINT(...) 
+    #define HTTP_PRINT_LINE(...) 
+    #define HTTP_PRINT_LINE_ARGS(...) 
 #endif
 
 #define METHODS     \
@@ -71,13 +75,16 @@ typedef struct {
 } httpVersion;
 
 typedef struct {
+    buf field;
+    buf value;
+} header;
+
+typedef struct {
     methodType type;
     buf resource;
     httpVersion version;
-
-
+    header headers[MAX_HEADERS];
 } httpParser;
-
 
 typedef struct {
     char buffer[RECEIVE_BUFFER_SIZE];
@@ -103,7 +110,7 @@ typedef struct {
 
 
 typedef struct {
-    char name[RESOURCE_NAME_SIZE];
+    char name[MAX_RESOURCE_NAME_SIZE];
     methodType methodsMask; /* Mask of all supported methods */
     methodInformation methods[MAX_METHODS];
 } resourceInformation;
@@ -118,7 +125,7 @@ typedef struct {
 
 
 typedef struct { 
-    char deviceName[DEVICE_NAME_SIZE]; 
+    char deviceName[MAX_DEVICE_NAME_SIZE]; 
     resourceInformation resources[MAX_RESOURCES];
     parsingInformation parsed;
 } controlInformation;

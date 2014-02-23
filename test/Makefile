@@ -2,7 +2,8 @@ SRC_DIR=../src
 #LIB_DIR=../lib
 
 CC=gcc
-CFLAGS=-Wall -Werror -std=c99 -g 
+#CFLAGS=-Wall -Werror -std=c99 -g 
+CFLAGS=-Wall -std=c99 -g 
 
 #CLARITY_SRC= $(SRC_DIR)/http_handler.c \
 #			 $(LIB_DIR)/http-parser/http_parser.c
@@ -14,6 +15,9 @@ CLAITY_INC= -I$(LIB_DIR)/http-parser	\
 
 test: test.c $(CLARITY_SRC)
 	$(CC) $(CFLAGS) $< $(CLARITY_SRC) $(CLAITY_INC) -o $@
+
+src: $(CLAITY_SRC)
+	$(CC) $(CFLAGS) c $(CLAITY_SRC) $(CLAITY_INC)
 
 clean:
 	rm test

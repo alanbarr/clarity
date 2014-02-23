@@ -3,7 +3,6 @@
 #include "http_parser.h"
 #endif
 
-#include <stdio.h> /* TODO */
 #include <string.h>
 #include <strings.h>
 #include <ctype.h>
@@ -81,14 +80,14 @@ static int onUrl(http_parser* par, const char *data, size_t length)
     int index;
     methodType method = METHOD_TYPE_NONE;
 
-    PRINT_LINE_ARGS("Alan Debug %s", __FUNCTION__);
+    HTTP_PRINT_LINE_ARGS("Alan Debug %s", __FUNCTION__);
 
     control->parsed.resource = NULL;
     control->parsed.method = NULL;
 
     for (index = 0; index <length; index++)
     {
-        PRINT("%c", data[index]);
+        HTTP_PRINT("%c", data[index]);
     }
 
     if (length > RESOURCE_NAME_SIZE)
@@ -135,7 +134,7 @@ static int onUrl(http_parser* par, const char *data, size_t length)
            if (control->parsed.resource->methods[methodIndex].type == method)
            {
                control->parsed.method = &control->parsed.resource->methods[methodIndex];
-               PRINT_LINE_ARGS("Got Method :%d", method);
+               HTTP_PRINT_LINE_ARGS("Got Method :%d", method);
                break;
            }
        }
@@ -143,7 +142,7 @@ static int onUrl(http_parser* par, const char *data, size_t length)
     else
     {
 
-        PRINT_LINE_ARGS("Didn't get method:%d", method);
+        HTTP_PRINT_LINE_ARGS("Didn't get method:%d", method);
         return -1;
     }
 
@@ -154,11 +153,11 @@ static int onUrl(http_parser* par, const char *data, size_t length)
 static int onStatus(http_parser* par, const char *data, size_t length)
 {
     int index = 0;
-    PRINT("\n\nAlan Debug %s\n", __FUNCTION__);
+    HTTP_PRINT("\n\nAlan Debug %s\n", __FUNCTION__);
 
     for (index = 0; index <length; index++)
     {
-        PRINT("%c", data[index]);
+        HTTP_PRINT("%c", data[index]);
     }
 
     return 0;
@@ -167,15 +166,15 @@ static int onStatus(http_parser* par, const char *data, size_t length)
 
 static int onHeaderField(http_parser* par, const char *data, size_t length)
 {
-    PRINT_LINE("\n\n\nDEBUG");
+    HTTP_PRINT_LINE("\n\n\nDEBUG");
     int i;
     for (i=0;i<length;i++)
     {
-        PRINT("%c", data[i]);
+        HTTP_PRINT("%c", data[i]);
     }
     if (strncasecmp(data, "Content-type", length) == 0)
     {
-        PRINT_LINE("Got content type");
+        HTTP_PRINT_LINE("Got content type");
         control->parsed.nextHeaderValue = CONTENT_TYPE;
     }
     return 0;
@@ -199,11 +198,11 @@ static int onHeaderValue(http_parser* par, const char *data, size_t length)
 static int onBody(http_parser* par, const char *data, size_t length)
 {
     int index = 0;
-    PRINT("\n\nAlan Debug %s\n", __FUNCTION__);
+    HTTP_PRINT("\n\nAlan Debug %s\n", __FUNCTION__);
 
     for (index = 0; index <length; index++)
     {
-        PRINT("%c", data[index]);
+        HTTP_PRINT("%c", data[index]);
     }
 
     return 0;
@@ -212,7 +211,7 @@ static int onBody(http_parser* par, const char *data, size_t length)
 
 static int onHeadersComplete(http_parser* par)
 {
-    PRINT_LINE_ARGS("Alan Debug %s\n", __FUNCTION__);
+    HTTP_PRINT_LINE_ARGS("Alan Debug %s\n", __FUNCTION__);
 
     return 0;
 }   
@@ -220,7 +219,7 @@ static int onHeadersComplete(http_parser* par)
 
 static int onComplete(http_parser*par)
 {
-    PRINT_LINE_ARGS("In function: %s.", __FUNCTION__);
+    HTTP_PRINT_LINE_ARGS("In function: %s.", __FUNCTION__);
     control->parsed.completed = true;
     return 0;
 }   
@@ -271,17 +270,17 @@ static const char * getNextLine(const char * data, uint16_t size)
 
     if (dataRtnd == NULL)
     {
-        PRINT_LINE("getEndOfLine failed.");
+        HTTP_PRINT_LINE("getEndOfLine failed.");
         return NULL;
     }
 
     if ((dataRtnd + HTTP_EOL_LEN) > (data + size - 1))
     {
-        PRINT_LINE("Not enough room for EOL.");
+        HTTP_PRINT_LINE("Not enough room for EOL.");
         return NULL;
     }
     
-    PRINT_LINE("Should be returning success.");
+    HTTP_PRINT_LINE("Should be returning success.");
     return (dataRtnd += HTTP_EOL_LEN);
 }
 
@@ -298,14 +297,14 @@ static const char * parseHttpStartLine(const char * data,
 
     if (eol == NULL)
     {
-        PRINT_LINE("Could not find eol.");
+        HTTP_PRINT_LINE("Could not find eol.");
         return NULL;
     }
 
     if ((eol-c) < HTTP_START_LINE_MIN_LEN)
     {
-        PRINT_LINE_ARGS("eol: %p c: %p line length: %d", eol,c,(int)(eol-c));
-        PRINT_LINE("FAIL");
+        HTTP_PRINT_LINE_ARGS("eol: %p c: %p line length: %d", eol,c,(int)(eol-c));
+        HTTP_PRINT_LINE("FAIL");
         return NULL;
     }
     
@@ -331,14 +330,14 @@ static const char * parseHttpStartLine(const char * data,
 
     if (type == METHOD_INVALID)
     {
-        PRINT_LINE("FAIL");
+        HTTP_PRINT_LINE("FAIL");
         return NULL;
     }
 
     else if (strncasecmp(c, methodStrings[type],
                          SHORTER(strlen(methodStrings[type]), (eol-c)) != 0))
     {
-        PRINT_LINE("FAIL");
+        HTTP_PRINT_LINE("FAIL");
         return NULL;
     }
 
@@ -348,7 +347,7 @@ static const char * parseHttpStartLine(const char * data,
     
     if (*c != ' ')
     {
-        PRINT_LINE("Space not found after type.");
+        HTTP_PRINT_LINE("Space not found after type.");
         return NULL;
     }
     
@@ -361,7 +360,7 @@ static const char * parseHttpStartLine(const char * data,
     }
     else 
     {
-        PRINT_LINE("Resource string did not start as expected.");
+        HTTP_PRINT_LINE("Resource string did not start as expected.");
         return NULL;
     }
 
@@ -378,7 +377,7 @@ static const char * parseHttpStartLine(const char * data,
     
     if (version == NULL)
     {
-        PRINT_LINE("Version was NULL.");
+        HTTP_PRINT_LINE("Version was NULL.");
         return NULL;
     }
     
@@ -387,7 +386,7 @@ static const char * parseHttpStartLine(const char * data,
     {
         if (strncasecmp(version, "HTTP/", 5) != 0)  /* TODO */
         {
-            PRINT_LINE("HTTP/ not present.");
+            HTTP_PRINT_LINE("HTTP/ not present.");
             return NULL;
         }
 
@@ -396,7 +395,7 @@ static const char * parseHttpStartLine(const char * data,
         /* First Digit */
         if (isdigit(*c) == 0)
         {
-            PRINT_LINE("Version Major was not a digit.");
+            HTTP_PRINT_LINE("Version Major was not a digit.");
             return NULL;
         }
         else
@@ -408,7 +407,7 @@ static const char * parseHttpStartLine(const char * data,
         c++;                /* You'll find no OOP here */
         if (*c != '.')
         {
-            PRINT_LINE("Version DP not as expected.");
+            HTTP_PRINT_LINE("Version DP not as expected.");
             return NULL;
         }
 
@@ -416,7 +415,7 @@ static const char * parseHttpStartLine(const char * data,
         c++;
         if (isdigit(*c) == 0)
         {
-            PRINT_LINE("Version Minor not a digit.");
+            HTTP_PRINT_LINE("Version Minor not a digit.");
             return NULL;
         }
         else
@@ -440,29 +439,28 @@ static const char * parseHttpHeaders(const char * data,
                                      httpParser * par)
 {
     const char * const dataStart = data;
-    const char * headerFieldStart = NULL;
-    uint16_t headerFieldLength = 0;
-    const char * headerValueStart = NULL;
-    uint16_t headerValueLength = 0;
+    header header;
     const char * lineStart = data;
     const char * eol = getEndOfLine(data,size);
+    uint8_t loopIteration = 0;
 
-    PRINT_LINE_ARGS("IN %s.", __FUNCTION__);
+    HTTP_PRINT_LINE_ARGS("IN %s.", __FUNCTION__);
     if (eol == NULL)
     {
-        PRINT_LINE("Couldn't find EOL");
+        HTTP_PRINT_LINE("Couldn't find EOL");
         return NULL;
     }
 
     /*TODO LOOP HERE FOR HEADERS */
     if (P_DIFF_LEN(eol, data) <= HTTP_EOL_LEN)
     {
-        PRINT_LINE("Data length too short to hold EOL characters.");
+        HTTP_PRINT_LINE("Data length too short to hold EOL characters.");
         return NULL;
     }
 
     while (P_DIFF_LEN(data, lineStart) <= size)
     {
+        memset(&header, 0, sizeof(header));
         /* Check for blank line */
         if (strncmp(data, HTTP_EOL_STR, P_DIFF_LEN(eol,data)) == 0)
         {
@@ -470,47 +468,58 @@ static const char * parseHttpHeaders(const char * data,
         }
 
         /* Must be a header then. Get field. */
-        headerFieldStart = data;
+        header.field.data = data;
         while (data < eol) /* Ensure a byte for header value as well.*/
         {
             if (*data == ':')
             {
-                headerFieldLength = (data-lineStart); /* Length to, not incl the colon */
+                header.field.size = (data-lineStart); /* Length to, not incl the colon */
                 break;
             }
             data++;
         }
 
-        if (headerFieldLength == 0)
+        if (header.field.size == 0)
         {
-            PRINT_LINE("headerFieldLength was zero.");
+            HTTP_PRINT_LINE("header field length was zero.");
             return NULL;
         }
         
-        /* c is still sitting on the colon */
-        if (data+2 < eol)
+        /* data is still sitting on the colon */
+        /* expecting at least two more chars - space and value */
+        if (data+2 >= eol)
         {
-            if (*(++data) != ' ')
-            {
-                PRINT_LINE("Space not present.");
-                return NULL;
-            }
-            data++;
+            HTTP_PRINT_LINE("Not enough data to eol.");
+            return NULL;
         }
 
-        /* c is on the header value */
-        headerValueStart = data;
-        headerValueLength = eol-data;   
+        data++; /* Move data to space */
+        if (*data != ' ')
+        {
+            HTTP_PRINT_LINE("Space not present.");
+            return NULL;
+        }
+        data++;
+
+        /* data is on the header value */
+        if (eol==data)
+        {
+            HTTP_PRINT_LINE("data and eol are the same.");
+            return NULL;
+        }
      
-        /* TODO now have headers */
-        if (headerValueStart == headerFieldStart &&
-            headerValueLength == headerFieldLength)
+        header.value.data = data;
+        header.value.size = eol-data;   
+
+        /* Only store if room */
+        if (loopIteration<MAX_HEADERS)
         {
-            /* prevent compiler complaint for now */
+            par->headers[loopIteration] = header;
         }
 
-        PRINT_LINE_ARGS("ALAN DEBUG. Going to try to grab next line."
-                        "dataStart: %p size: %d eol: %p dataEnd %p", dataStart, size, eol, dataStart + size);
+        HTTP_PRINT_LINE_ARGS("ALAN DEBUG. Going to try to grab next line."
+                        "dataStart: %p size: %d eol: %p dataEnd %p", dataStart,
+                        size, eol, dataStart + size);
 
         /*  TODO problem here. Need to identify when we hit CRLF seperating 
          *  body e.g.*/
@@ -524,10 +533,14 @@ static const char * parseHttpHeaders(const char * data,
             return NULL;
         }
 
-        if ((eol = getEndOfLine(lineStart, P_OFFSET_LEN(dataStart, size, lineStart))) == NULL)
+        if ((eol = getEndOfLine(lineStart, P_OFFSET_LEN(dataStart, size,
+                                lineStart))) == NULL)
         {
             return NULL;
         }
+
+        data=lineStart;
+        loopIteration++;
     }
 
    return eol;/* TODO */
@@ -551,7 +564,7 @@ const char * parseHttp(httpParser * par, const char * data, uint16_t size, void 
 
     http_parser_init(&parser, HTTP_REQUEST);
     nparsed = http_parser_execute(&parser, &settings, data, size);
-    PRINT("\n\nnparsed: %u\n", (unsigned int)nparsed);
+    HTTP_PRINT("\n\nnparsed: %u\n", (unsigned int)nparsed);
 
     if (control->parsed.completed)
     {
@@ -560,14 +573,14 @@ const char * parseHttp(httpParser * par, const char * data, uint16_t size, void 
 #endif
     if ((dataRtnd = parseHttpStartLine(data, size, par)) == NULL)
     {
-        PRINT_LINE("Parse Start Line Failed.");
+        HTTP_PRINT_LINE("Parse Start Line Failed.");
         return NULL;
     }
     
     else if ((dataRtnd = getNextLine(dataRtnd, P_OFFSET_LEN(data, size, 
                                                           dataRtnd))) == NULL)
     {
-        PRINT_LINE("getNextLine failed.");
+        HTTP_PRINT_LINE("getNextLine failed.");
         return NULL;
     }
 
@@ -575,7 +588,7 @@ const char * parseHttp(httpParser * par, const char * data, uint16_t size, void 
                                           P_OFFSET_LEN(data, size, dataRtnd),
                                           par)) == NULL)
     {
-        PRINT_LINE("Parse Headers Failed.");
+        HTTP_PRINT_LINE("Parse Headers Failed.");
         return NULL;
     }
 
