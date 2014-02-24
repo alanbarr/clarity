@@ -20,7 +20,7 @@ static const char * methodStrings[] = {
     "INVALID"
 };
 
-#define SMALLER(X,Y) (X<Y ? X : Y)
+#define SMALLER(X,Y) ((uint32_t)(X)<(uint32_t)(Y) ? (uint32_t)X : (uint32_t)Y)
 
 /* Length of string offset from an offset when  string start and length
  * are known*/
@@ -30,11 +30,10 @@ static const char * methodStrings[] = {
 #define P_DIFF_LEN(BIGGER, SMALLER) (BIGGER - SMALLER + 1)
 
 
+static controlInformation * control = NULL; 
 #if 0
 static http_parser parser;
 static http_parser_settings settings;
-#endif
-static controlInformation * control = NULL; 
 
 /* Returns number of bytes that can be stored to the buffer in one 
  * continous copy */
@@ -78,7 +77,6 @@ void receiveBufferWriteUpdate(readBuffer * buffer, uint16_t size)
 }
 
 
-#if 0
 static int onUrl(http_parser* par, const char *data, size_t length)
 {
     uint8_t resourceIndex;
@@ -240,7 +238,7 @@ static int onMessageBegin(http_parser*par)
 #endif
  
 
-void registerControl(controlInformation * userControl)
+void httpRegisterControl(controlInformation * userControl)
 {
     control = userControl;
 }
@@ -291,9 +289,9 @@ static const char * getNextLine(const char * data, uint16_t size)
 }
 
 
-static const char * parseHttpStartLine(const char * data,
-                                       uint16_t size,
-                                       httpParser * par)
+static const char * parseStartLine(const char * data,
+                                   uint16_t size,
+                                   httpParser * par)
 {
     const char * c = data;
     const char * resource = NULL;
@@ -399,7 +397,7 @@ static const char * parseHttpStartLine(const char * data,
         c += 5;                       /* Skip HTTP/ */
 
         /* First Digit */
-        if (isdigit(*c) == 0)
+        if (isdigit((int)*c) == 0)
         {
             HTTP_PRINT_LINE("Version Major was not a digit.");
             return NULL;
@@ -419,7 +417,7 @@ static const char * parseHttpStartLine(const char * data,
 
         /* Second Digit */
         c++;
-        if (isdigit(*c) == 0)
+        if (isdigit((int)*c) == 0)
         {
             HTTP_PRINT_LINE("Version Minor not a digit.");
             return NULL;
@@ -441,9 +439,9 @@ static const char * parseHttpStartLine(const char * data,
 
 /* data is pointer to first byte on a new line */
 /* TODO content length probably important to nab here. maybe content type as well */
-static const char * parseHttpHeaders(const char * data,
-                                     uint16_t size,
-                                     httpParser * par)
+static const char * parseHeaders(const char * data,
+                                 uint16_t size,
+                                 httpParser * par)
 {
     const char * const dataStart = data;
     header header;
@@ -617,7 +615,7 @@ static const char * parseHttpHeaders(const char * data,
 
 
 /* TODO assuming data point to the blank line */
-static const char * parseHttpBody(const char * data,
+static const char * parseBody(const char * data,
                                   uint16_t size,
                                   httpParser * par)
 {
@@ -648,14 +646,15 @@ static const char * parseHttpBody(const char * data,
 
     par->body.data = body;
 
-    return body;
+    return body + par->body.size;
 }
 
 
 
-const char * parseHttp(httpParser * par, const char * data, uint16_t size, void * user)
+const char * httpParse(httpParser * par, const char * data, uint16_t size, void * user)
 {
     const char * dataRtnd;
+    (void)user;
 #if 0
     size_t nparsed;
 
@@ -677,9 +676,9 @@ const char * parseHttp(httpParser * par, const char * data, uint16_t size, void 
         control->parsed.method->callback(NULL, NULL, 0, user);
     }
 #endif
-    memset(par, 0, sizeof(par));
+    memset(par, 0, sizeof(*par));
 
-    if ((dataRtnd = parseHttpStartLine(data, size, par)) == NULL)
+    if ((dataRtnd = parseStartLine(data, size, par)) == NULL)
     {
         HTTP_PRINT_LINE("Parse Start Line Failed.");
         return NULL;
@@ -692,7 +691,7 @@ const char * parseHttp(httpParser * par, const char * data, uint16_t size, void 
         return NULL;
     }
 
-    else if ((dataRtnd = parseHttpHeaders(dataRtnd,
+    else if ((dataRtnd = parseHeaders(dataRtnd,
                                           P_OFFSET_LEN(data, size, dataRtnd),
                                           par)) == NULL)
     {
@@ -714,7 +713,7 @@ const char * parseHttp(httpParser * par, const char * data, uint16_t size, void 
 #endif
 
 
-    else if ((dataRtnd = parseHttpBody(dataRtnd, P_OFFSET_LEN(data, size, dataRtnd),
+    else if ((dataRtnd = parseBody(dataRtnd, P_OFFSET_LEN(data, size, dataRtnd),
                                        par)) == NULL)
     {
         HTTP_PRINT_LINE("Parse Data Failed.");

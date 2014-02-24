@@ -97,12 +97,14 @@ typedef struct {
     buf body;
 } httpParser;
 
+#if 0
 typedef struct {
     char buffer[RECEIVE_BUFFER_SIZE];
     uint16_t start;
     uint16_t end;
     uint16_t taken;
 } readBuffer;
+#endif
 
 
 typedef enum {
@@ -141,10 +143,10 @@ typedef struct {
     parsingInformation parsed;
 } controlInformation;
 
-const char * parseHttp(httpParser * par, const char * data, const uint16_t size,
+const char * httpParse(httpParser * par, const char * data, const uint16_t size,
                void * user);
 
-void registerControl(controlInformation * control);
+void httpRegisterControl(controlInformation * control);
 
 
 
