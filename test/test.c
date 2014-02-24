@@ -162,13 +162,20 @@ static int test_startLinesValid(void)
     const char * rtn = NULL;
 
     static const char * startLinesValid[] = {
-        "GET / HTTP/1.1 \r\n",
-        "HEAD /robots.txt HTTP/0.9 \r\n",
-        "PUT /one/two/three/four HTTP/2.0\r\n",
-        "POST / HTTP/0.9 \r\n",
-        "TRACE / HTTP/0.9 \r\n",
-        "OPTIONS /onetwothreefourfivesix HTTP/0.9 \r\n",
+        "GET / HTTP/1.1 \r\n"
+         "\r\n",
+        "HEAD /robots.txt HTTP/0.9 \r\n"
+         "\r\n",
+        "PUT /one/two/three/four HTTP/2.0\r\n"
+         "\r\n",
+        "POST / HTTP/0.9 \r\n"
+         "\r\n",
+        "TRACE / HTTP/0.9 \r\n"
+         "\r\n",
+        "OPTIONS /onetwothreefourfivesix HTTP/0.9 \r\n"
+         "\r\n",
         "DELETE /robots.txt HTTP/0.9 \r\n"
+         "\r\n"
     };
 
     static httpParser startLineDataValid[7];
@@ -225,7 +232,7 @@ static int test_startLinesValid(void)
         rtn = parseHttp(&par, startLinesValid[i], strlen(startLinesValid[i]),
                         NULL);
 
-        ERROR_CHECK(rtn != NULL,"RTN was not NULL");
+        ERROR_CHECK(rtn == NULL,"RTN was NULL");
      
         ERROR_CHECK(startLineDataValid[i].type != par.type,
                     "Type not correct.");
@@ -283,7 +290,7 @@ static int test_headersValid(void)
     int hindex;
     httpParser par;
     const char * rtn = NULL;
-    static httpParser headerData[2];
+    static httpParser headerData[3];
 
     static const char * headersValid[] = {
     "DELETE /robots.txt HTTP/0.9 \r\n"
@@ -293,6 +300,7 @@ static int test_headersValid(void)
     "HEADER FIELD: HEADER VALUE\r\n"
     "HEADER FIELD: HEADER VALUE\r\n"
     "\r\n",
+
     "GET / HTTP/2.0 \r\n"
     "HEADER FIELD: HEADER VALUE\r\n"
     "HEADER FIELD: HEADER VALUE\r\n"
@@ -300,8 +308,13 @@ static int test_headersValid(void)
     "HEADER FIELD: HEADER VALUE\r\n"
     "HEADER FIELD: HEADER VALUE\r\n"
     "HEADER FIELD: HEADER VALUE\r\n"
-    "\r\n"
+    "\r\n",
 
+    "PUT /robots.txt HTTP/0.9 \r\n"
+    "Content-Type: text/plain\r\n"
+    "Content-Length: 1\r\n"
+    "\r\n"
+    "1",
     };
 
     memset(&headerData, 0, sizeof(headerData));
@@ -360,6 +373,14 @@ static int test_headersValid(void)
     headerData[2].headers[5].value.data = headersValid[2] + 17 + (14*11);
     headerData[2].headers[5].value.size = 12; 
 
+    headerData[3].type = PUT; 
+    headerData[3].resource.size = 11; 
+    headerData[3].resource.data = headersValid[3] + 7;  
+    headerData[3].version.major = 0; 
+    headerData[3].version.minor = 9; 
+    headerData[3].content.data = headersValid[3] + 41;
+    headerData[3].content.size = 1;
+
     for (index = 0; index<3; index++)
     {
         TEST_PRINT_ARG("Checking index: %d.", index);
@@ -378,6 +399,10 @@ static int test_headersValid(void)
                     "Version major not correct."); 
         ERROR_CHECK(headerData[index].version.minor != par.version.minor,
                     "Version minor not correct."); 
+        ERROR_CHECK(headerData[index].content.size != par.content.size,
+                    "content size not correct.");
+        ERROR_CHECK(headerData[index].content.data != par.content.data,
+                    "content data not correct.");  
 
         for (hindex = 0; hindex< MAX_HEADERS; hindex++)
         {
@@ -489,6 +514,72 @@ static int test_headersInvalid(void)
     return 1;
 }
 
+
+static int test_bodyValid(void)
+{
+    httpParser par;
+    int index;
+    const char * rtn;
+
+    static const char * bodiesValid[] = {   
+        "PUT / HTTP/1.0\r\n"                
+        "Content-Type: text/plain\r\n"      
+        "Content-Length: 4\r\n"             
+        "\r\n"                              
+        "BODY",                             
+ 
+        "POST / HTTP/1.0 \r\n"              
+        "HEADER FIELD: HEADER VALUE\r\n"    
+        "Content-Type: text/plain\r\n"      
+        "Content-Length: 15\r\n"            
+        "HEADER FIELD: HEADER VALUE\r\n"    
+        "\r\n"                              
+        "BODY12345678910"                   
+    };
+
+    static httpParser bodyData[2];
+
+    bodyData[0].type = GET; 
+    bodyData[0].resource.size = 1; 
+    bodyData[0].resource.data = bodiesValid[0] + 4;  
+    bodyData[0].version.major = 1; 
+    bodyData[0].version.minor = 0; 
+    bodyData[0].content.data = bodiesValid[0] + 30;
+    bodyData[0].content.size = 10;
+    bodyData[0].body.data = bodiesValid[0] + 63; 
+    bodyData[0].body.size = 4; 
+
+    bodyData[1].type = POST; 
+    bodyData[1].resource.size = 1; 
+    bodyData[1].resource.data = bodiesValid[0] + 5;  
+    bodyData[1].version.major = 1; 
+    bodyData[1].version.minor = 0; 
+    bodyData[1].content.data = bodiesValid[1] + 60;
+    bodyData[1].content.size = 10;
+    bodyData[1].body.data = bodiesValid[1] + 122; 
+    bodyData[1].body.size = 15; 
+
+    for (index = 0; index < 2; index++)
+    {
+        TEST_PRINT_ARG("Checking index: %d.", index);
+
+        memset(&par,0,sizeof(par));
+        rtn = parseHttp(&par, bodiesValid[index], strlen(bodiesValid[index]),
+                        NULL);
+        ERROR_CHECK(rtn == NULL,"RTN was NULL");
+        ERROR_CHECK(par.body.data != bodyData[index].body.data,
+                    "Body Data not as expected.");
+        ERROR_CHECK(par.body.size != bodyData[index].body.size,
+                    "Body Size not as expected.");
+        ERROR_CHECK(par.content.size != bodyData[index].content.size,
+                    "Content size not as expected.");
+        ERROR_CHECK(par.content.data != bodyData[index].content.data,
+                    "Content data not as expected.");
+    }
+
+    return 0;
+}
+
 int main(void) 
 {
 #if 0
@@ -509,7 +600,7 @@ int main(void)
     test_startLinesInvalid();
     test_headersValid();
     test_headersInvalid();
-
+    test_bodyValid();
     test_print(&testData);
     return 0;
 }

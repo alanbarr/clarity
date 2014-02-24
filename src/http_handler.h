@@ -19,6 +19,12 @@
 #define HTTP_EOL_STR                "\r\n"
 #define HTTP_EOL_LEN                2
 
+#define HTTP_CONTENT_TYPE_STR       "Content-Type: "
+#define HTTP_CONTENT_TYPE_LEN       14
+
+#define HTTP_CONTENT_LENGTH_STR     "Content-Length: " 
+#define HTTP_CONTENT_LENGTH_LEN     16
+
 #define HTTP_VERSION_LEN            8   /* "HTTP/X.X" */
                                     /* "GET / " VERSION \r\n */
 #define HTTP_START_LINE_MIN_LEN     (6 + HTTP_VERSION_LEN) 
@@ -84,6 +90,8 @@ typedef struct {
     buf resource;
     httpVersion version;
     header headers[MAX_HEADERS];
+    buf content;
+    buf body;
 } httpParser;
 
 typedef struct {

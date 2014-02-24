@@ -1,5 +1,5 @@
 SRC_DIR=../src
-#LIB_DIR=../lib
+LIB_DIR=../lib
 
 CC=gcc
 #CFLAGS=-Wall -Werror -std=c99 -g 
@@ -9,15 +9,22 @@ CFLAGS=-Wall -std=c99 -g
 #			 $(LIB_DIR)/http-parser/http_parser.c
 #
 CLARITY_SRC= $(SRC_DIR)/http_handler.c
+CLAITY_INC= -I$(SRC_DIR)
 
-CLAITY_INC= -I$(LIB_DIR)/http-parser	\
-			-I$(SRC_DIR)
+JOY_SRC= $(LIB_DIR)/http-parser/http_parser.c
+JOY_INC= -I$(LIB_DIR)/http-parser
 
 test: test.c $(CLARITY_SRC)
 	$(CC) $(CFLAGS) $< $(CLARITY_SRC) $(CLAITY_INC) -o $@
 
-src: $(CLAITY_SRC)
-	$(CC) $(CFLAGS) c $(CLAITY_SRC) $(CLAITY_INC)
+size_joy: test_size_joy.c
+	$(CC) $(CFLAGS) $< $ $(JOY_SRC) $(JOY_INC) -o $@
+
+size_mine: test_size_mine.c
+	$(CC) $(CFLAGS) $< $ $(CLARITY_SRC) $(CLAITY_INC) -o $@
+
+
+
 
 clean:
 	rm test
