@@ -540,13 +540,22 @@ static const char * parseHttpHeaders(const char * data,
         {
             long length;
             char * end;
+            char temp[MAX_CONTENT_LENGTH_DIGITS];
+
+            if (header.value.size >= MAX_CONTENT_LENGTH_DIGITS)
+            {
+                return NULL;
+            }
+            
+            memset(temp,0,sizeof(temp));
+            memcpy(temp, header.value.data, header.value.size);
+            temp[MAX_CONTENT_LENGTH_DIGITS-1] = 0; /* Force terminator */
 
             errno = 0;
 
-            length = strtol(header.value.data, 
-                            &end, 10);
+            length = strtol(temp, &end, 10);
 
-            if (end == NULL)
+            if (end != NULL && *end != 0)
             {
                 return NULL;
             }
@@ -620,7 +629,7 @@ static const char * parseHttpBody(const char * data,
         return NULL;
     }
     
-    if (size + HTTP_EOL_LEN < par->body.size)
+    if (size - HTTP_EOL_LEN < par->body.size)
     {   
         par->body.size = 0;
         return NULL;
@@ -711,11 +720,8 @@ const char * parseHttp(httpParser * par, const char * data, uint16_t size, void 
         HTTP_PRINT_LINE("Parse Data Failed.");
         return NULL;
     }
-
-
-
+    
     return data; /* TODO */
-
 }
 
 

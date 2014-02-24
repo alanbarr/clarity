@@ -580,6 +580,74 @@ static int test_bodyValid(void)
     return 0;
 }
 
+
+static int test_bodyInvalid(void)
+{
+    httpParser par;
+    int index;
+    const char * rtn;
+
+    static const char * bodiesInvalid[] = {   
+        "PUT / HTTP/1.0\r\n"                
+        "Content-Type: text/plain\r\n"      
+        "Content-Length: 5\r\n"    /* Too Long */         
+        "\r\n"                              
+        "BODY",                             
+ 
+        "PUT / HTTP/1.0\r\n"                
+        "Content-Type: text/plain\r\n"      
+        "Content-Length: x\r\n"    /* Crap */         
+        "\r\n"                              
+        "BODY",            
+    };
+
+    static httpParser bodyData[2];
+
+    bodyData[0].type = PUT; 
+    bodyData[0].resource.size = 1; 
+    bodyData[0].resource.data = bodiesInvalid[0] + 4;  
+    bodyData[0].version.major = 1; 
+    bodyData[0].version.minor = 0; 
+    bodyData[0].content.data = bodiesInvalid[0] + 30;
+    bodyData[0].content.size = 10;
+    bodyData[0].body.data = NULL; 
+    bodyData[0].body.size = 0; 
+ 
+    bodyData[1].type = PUT; 
+    bodyData[1].resource.size = 1; 
+    bodyData[1].resource.data = bodiesInvalid[1] + 4;  
+    bodyData[1].version.major = 1; 
+    bodyData[1].version.minor = 0; 
+    bodyData[1].content.data = bodiesInvalid[1] + 30;
+    bodyData[1].content.size = 10;
+    bodyData[1].body.data = NULL; 
+    bodyData[1].body.size = 0; 
+
+
+    for (index = 0; index < 2; index++)
+    {
+        TEST_PRINT_ARG("Checking index: %d.", index);
+
+        memset(&par,0,sizeof(par));
+        rtn = parseHttp(&par, bodiesInvalid[index], strlen(bodiesInvalid[index]),
+                        NULL);
+        ERROR_CHECK(rtn != NULL,"RTN was not NULL");
+        ERROR_CHECK(par.body.data != bodyData[index].body.data,
+                    "Body Data not as expected.");
+        ERROR_CHECK(par.body.size != bodyData[index].body.size,
+                    "Body Size not as expected.");
+        ERROR_CHECK(par.content.size != bodyData[index].content.size,
+                    "Content size not as expected.");
+        ERROR_CHECK(par.content.data != bodyData[index].content.data,
+                    "Content data not as expected.");
+    }
+
+    return 0;
+}
+
+
+
+
 int main(void) 
 {
 #if 0
@@ -596,11 +664,14 @@ int main(void)
     parseHttp(&par, tst_root, strlen(tst_root), NULL);
 #endif
 
+#if 1
     test_startLinesValid();
     test_startLinesInvalid();
     test_headersValid();
     test_headersInvalid();
     test_bodyValid();
+    test_bodyInvalid();
+#endif
     test_print(&testData);
     return 0;
 }

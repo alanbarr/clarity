@@ -10,6 +10,8 @@
 #define MAX_DEVICE_NAME_SIZE        15
 #define MAX_RESOURCE_NAME_SIZE      20
 
+#define MAX_CONTENT_LENGTH_DIGITS   6 /* Max number of characters in sring + NULL */
+
 #define RECEIVE_BUFFER_SIZE         1024
 #define RECEIVE_BUFFER_LAST_INDEX   (RECEIVE_BUFFER_SIZE - 1)
 
@@ -24,6 +26,7 @@
 
 #define HTTP_CONTENT_LENGTH_STR     "Content-Length: " 
 #define HTTP_CONTENT_LENGTH_LEN     16
+
 
 #define HTTP_VERSION_LEN            8   /* "HTTP/X.X" */
                                     /* "GET / " VERSION \r\n */
