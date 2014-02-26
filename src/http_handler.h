@@ -108,7 +108,7 @@ typedef struct {
     header headers[MAX_HEADERS];
     buf content;
     buf body;
-} httpParser;
+} httpInfo;
 
 typedef enum {
     HEADER_TYPE_NONE,
@@ -152,7 +152,7 @@ typedef struct {
 #endif
 } controlInformation;
 
-const char * httpParse(httpParser * par, const char * data, const uint16_t size,
+const char * httpParse(httpInfo * par, const char * data, const uint16_t size,
                void * user);
 
 void httpRegisterControl(controlInformation * control);

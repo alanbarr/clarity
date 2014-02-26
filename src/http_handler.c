@@ -289,7 +289,7 @@ static const char * getNextLine(const char * data, uint16_t size)
 
 static const char * parseStartLine(const char * data,
                                    uint16_t size,
-                                   httpParser * par)
+                                   httpInfo * par)
 {
     const char * c = data;
     const char * resource = NULL;
@@ -441,7 +441,7 @@ static const char * parseStartLine(const char * data,
  *         in the blank seperator line. */
 static const char * parseHeaders(const char * data,
                                  uint16_t size,
-                                 httpParser * par)
+                                 httpInfo * par)
 {
     const char * const dataStart = data;
     header header;
@@ -621,7 +621,7 @@ static const char * parseHeaders(const char * data,
  *         in the body */
 static const char * parseBody(const char * data,
                                   uint16_t size,
-                                  httpParser * par)
+                                  httpInfo * par)
 {
     const char * body = NULL;
 
@@ -655,7 +655,7 @@ static const char * parseBody(const char * data,
 
 
 
-const char * httpParse(httpParser * par, const char * data, uint16_t size, void * user)
+const char * httpParse(httpInfo * par, const char * data, uint16_t size, void * user)
 {
     const char * dataRtnd;
     (void)user;

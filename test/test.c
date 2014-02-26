@@ -133,7 +133,7 @@ static void test_print(testInformation * test)
 static int test_startLinesValid(void)
 {
     int i;
-    httpParser par;
+    httpInfo par;
     const char * rtn = NULL;
 
     static const char * startLinesValid[] = {
@@ -153,7 +153,7 @@ static int test_startLinesValid(void)
          "\r\n"
     };
 
-    static httpParser startLineDataValid[7];
+    static httpInfo startLineDataValid[7];
 
     memset(&startLineDataValid, 0, sizeof(startLineDataValid));
 
@@ -226,7 +226,7 @@ static int test_startLinesValid(void)
 static int test_startLinesInvalid(void)
 {
     int i;
-    httpParser par;
+    httpInfo par;
     const char * rtn = NULL;
     
     static const char * startLinesInvalid[] = {
@@ -263,9 +263,9 @@ static int test_headersValid(void)
 {
     int index;
     int hindex;
-    httpParser par;
+    httpInfo par;
     const char * rtn = NULL;
-    static httpParser headerData[3];
+    static httpInfo headerData[3];
 
     static const char * headersValid[] = {
     "DELETE /robots.txt HTTP/0.9 \r\n"
@@ -405,9 +405,9 @@ static int test_headersInvalid(void)
 {
     int index;
     int hindex;
-    httpParser par;
+    httpInfo par;
     const char * rtn = NULL;
-    static httpParser headerData[2];
+    static httpInfo headerData[2];
 
     static const char * headersInvalid[] = {
     "GET / HTTP/1.0 \r\n"
@@ -492,7 +492,7 @@ static int test_headersInvalid(void)
 
 static int test_bodyValid(void)
 {
-    httpParser par;
+    httpInfo par;
     int index;
     const char * rtn;
 
@@ -512,7 +512,7 @@ static int test_bodyValid(void)
         "BODY12345678910"                   
     };
 
-    static httpParser bodyData[2];
+    static httpInfo bodyData[2];
 
     bodyData[0].type = GET; 
     bodyData[0].resource.size = 1; 
@@ -558,7 +558,7 @@ static int test_bodyValid(void)
 
 static int test_bodyInvalid(void)
 {
-    httpParser par;
+    httpInfo par;
     int index;
     const char * rtn;
 
@@ -576,7 +576,7 @@ static int test_bodyInvalid(void)
         "BODY",            
     };
 
-    static httpParser bodyData[2];
+    static httpInfo bodyData[2];
 
     bodyData[0].type = PUT; 
     bodyData[0].resource.size = 1; 
@@ -627,7 +627,7 @@ static void test_examples(void)
     const char * rtns[2];
     int index;
     int hindex;
-    httpParser par;
+    httpInfo par;
 
     static const char * test_examples[] ={
     "GET /robots.txt HTTP/1.0\r\n"          
@@ -646,7 +646,7 @@ static void test_examples(void)
     "POINT JUST BEFORE HERE."
     };
 
-    static httpParser exampleData[2];
+    static httpInfo exampleData[2];
 
     memset(exampleData, 0, sizeof(exampleData));
 

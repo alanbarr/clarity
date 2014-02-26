@@ -16,7 +16,7 @@
 #include <signal.h>
 #include <unistd.h>
 
-#define PORT 56123
+#define ADDR_STR "localhost"
 #define PORT_STR "56123"
 
 #define TEST_PRINT(S) \
@@ -27,26 +27,28 @@
 
 static uint32_t generalPut(const char * body, const char * data, 
                            const uint16_t size, void * user)
-{
+{   
+    TEST_PRINT_ARG("In %s.", __FUNCTION__);
     return 0;
 }   
 
 uint32_t generalGet(const char * body, const char * data,
                     const uint16_t size, void * user)
 {
+    TEST_PRINT_ARG("In %s.", __FUNCTION__);
     return 0;
 }   
 
 uint32_t generalPost(const char * body, const char * data,
                      const uint16_t size, void * user)
 {
+    TEST_PRINT_ARG("In %s.", __FUNCTION__);
     return 0;
 }   
 
 
 static void setupControl(controlInformation * control)
 {
-
     control->deviceName = "Test_Control";
 
     control->resources[0].name = "/";
@@ -72,29 +74,17 @@ static void runServer(void)
     int sockfd;
     struct addrinfo hints;
     struct addrinfo *servinfo;
-#if 0
-    struct sockaddr_in addr;
-    socklen_t sin_size;
-    int rv;
-#endif
-
-#if 0
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(PORT);
-    addr.sin_addr
-#endif
 
     memset(&hints, 0 , sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM; 
     hints.ai_flags = AI_PASSIVE;     
 
-    if (0 != getaddrinfo("localhost", PORT_STR, &hints, &servinfo))
+    if (0 != getaddrinfo(ADDR_STR, PORT_STR, &hints, &servinfo))
     {
         TEST_PRINT("getAddrInfo failed");
         TEST_PRINT_ARG("errno: %d", errno);
         TEST_PRINT_ARG("errno: %s", strerror(errno));
-        return;
     }
 
     else if (-1 == (sockfd = socket(servinfo->ai_family,
@@ -102,13 +92,11 @@ static void runServer(void)
                                     servinfo->ai_protocol)))
     {
         TEST_PRINT("Socket failed");
-        return;
     }
 
     else if (-1 == (bind(sockfd, servinfo->ai_addr, servinfo->ai_addrlen)))
     { 
         TEST_PRINT("bind failed");
-        return;
     }
 
     else if (-1 == (listen(sockfd, 1)))
@@ -122,31 +110,38 @@ static void runServer(void)
         socklen_t addrlenthem;
         int newfd;
         int bytes;
-        int i;
-        char buf[20];
+        char buf[200];
+        const char * httpRtn = NULL;
+        httpInfo par; 
+
+        TEST_PRINT("Attempting accept.");
 
         if (-1 == (newfd = accept(sockfd, &addrthem, &addrlenthem)))
         {
-            TEST_PRINT("accept failed");
-            continue;
+            TEST_PRINT("accept failed.");
+            break;
         }
 
         TEST_PRINT("accept ok");
 
         if ((bytes = recv(newfd, buf, sizeof(buf), 0)) <= 0)
         {
-            TEST_PRINT("recv failed");
-            return;
+            TEST_PRINT("recv failed.");
+            break;
         }
+
         TEST_PRINT_ARG("recv returns with %d",bytes);
-        for (i=0; i<bytes; i++)
+
+        if (NULL == ((httpRtn = httpParse(&par, buf, bytes, NULL))))
         {
-            putchar((int)buf[i]);
+            TEST_PRINT("httpParse returned NULL");
+            break;
         }
-        putchar('\n');
         sleep(2);
     }
 
+    /* error handling */
+    close(sockfd);
 }
 
 

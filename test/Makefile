@@ -15,10 +15,17 @@ CLAITY_INC= -I$(SRC_DIR)
 JOY_SRC= $(LIB_DIR)/http-parser/http_parser.c
 JOY_INC= -I$(LIB_DIR)/http-parser
 
-test: test.c $(CLARITY_SRC)
+all: test_unit server
+
+test_unit: test.c $(CLARITY_SRC)
 	$(CC) $(CFLAGS) $< $(CLARITY_SRC) $(CLAITY_INC) -o $@
 
-server: test_server.c $(CLARITY_SRC)
+server: test_server test_server_client
+
+test_server_client: test_server_client.c
+	$(CC) $(CFLAGS) $< -o $@
+
+test_server: test_server.c $(CLARITY_SRC)
 	$(CC) $(CFLAGS) $< $(CLARITY_SRC) $(CLAITY_INC) -o $@
 
 size_joy: test_size_joy.c
