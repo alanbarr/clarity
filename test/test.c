@@ -1,9 +1,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#if 0
-#include "http_parser.h"
-#endif
 #include "http_handler.h"
 
 #define TEST_PRINT(S) \
@@ -15,26 +12,6 @@
 #define ERROR_CHECK(BOOL, STR) \
     test_check(&testData, BOOL, STR, __FILE__, __LINE__)
 
-char * tst_get =
-"GET /robots.txt HTTP/1.0\r\n"
-"Host: www.joes-hardware.com\r\n"
-"User-Agent: Slurp/2.0\r\n"
-"Date: Wed Oct 3 20:22:48 EST 2001\r\n"
-"\r\n";
-
-char * tst_put =
-"POST /path/script.cgi HTTP/1.0\r\n"
-"From: frog@jmarshall.com\r\n"
-"User-Agent: HTTPTool/1.0\r\n"
-"Content-Type: application/x-www-form-urlencoded\r\n"
-"Content-Length: 32\r\n"
-"\r\n"
-"home=Cosby&favorite+flavor=flies\r\n";
-
-char * tst_root =
-"GET / HTTP/1.0\r\n"
-"\r\n";
- 
 typedef struct {
     uint32_t checks;
     uint32_t passes;
@@ -96,8 +73,6 @@ controlInformation control =  /* TODO only one? */
         }
 
     },
-    {
-    }
 };
 
 
@@ -646,23 +621,134 @@ static int test_bodyInvalid(void)
 }
 
 
+static void test_examples(void)
+{
+    const char * rtn;
+    const char * rtns[2];
+    int index;
+    int hindex;
+    httpParser par;
+
+    static const char * test_examples[] ={
+    "GET /robots.txt HTTP/1.0\r\n"          
+    "Host: www.joes-hardware.com\r\n"       
+    "User-Agent: Slurp/2.0\r\n"             
+    "Date: Wed Oct 3 20:22:48 EST 2001\r\n" 
+    "\r\n",
+
+    "POST / HTTP/1.0\r\n"
+    "From: frog@jmarshall.com\r\n"
+    "Content-Type: application/x-www-form-urlencoded\r\n"
+    "Content-Length: 32\r\n"
+    "User-Agent: HTTPTool/1.0\r\n"
+    "\r\n"
+    "home=Cosby&favorite+flavor=flies"
+    "POINT JUST BEFORE HERE."
+    };
+
+    static httpParser exampleData[2];
+
+    memset(exampleData, 0, sizeof(exampleData));
+
+    exampleData[0].type = GET; 
+    exampleData[0].resource.size = 11; 
+    exampleData[0].resource.data = test_examples[0] + 4;  
+    exampleData[0].version.major = 1; 
+    exampleData[0].version.minor = 0; 
+    exampleData[0].content.data = NULL;
+    exampleData[0].content.size = 0;
+    exampleData[0].body.data = NULL; 
+    exampleData[0].body.size = 0; 
+    /* Host */
+    exampleData[0].headers[0].field.data = test_examples[0] + 26;
+    exampleData[0].headers[0].field.size = 4;
+    exampleData[0].headers[0].value.data = test_examples[0]+ 26 + 4 + 2;
+    exampleData[0].headers[0].value.size = 21;
+    /* User Agent */
+    exampleData[0].headers[1].field.data = test_examples[0] + 26 + 29;
+    exampleData[0].headers[1].field.size = 10;
+    exampleData[0].headers[1].value.data = test_examples[0] + 26 + 29 + 10 + 2; 
+    exampleData[0].headers[1].value.size = 9;
+    /* Date */
+    exampleData[0].headers[2].field.data = test_examples[0] + 25 + 29 + 24;
+    exampleData[0].headers[2].field.size = 4;
+    exampleData[0].headers[2].value.data = test_examples[0] + 25 + 29 + 24 + 6;
+    exampleData[0].headers[2].value.size = 27;
+
+    exampleData[1].type = POST; 
+    exampleData[1].resource.size = 1; 
+    exampleData[1].resource.data = test_examples[1] + 5;  
+    exampleData[1].version.major = 1; 
+    exampleData[1].version.minor = 0; 
+    exampleData[1].content.data = test_examples[1] + 17 + 26 + 14;
+    exampleData[1].content.size = 33;
+    exampleData[1].body.data = test_examples[1] + 17 + 26 + 49 + 20 + 26 + 2;  
+    exampleData[1].body.size = 32; 
+    /* From */
+    exampleData[1].headers[0].field.data = test_examples[1] + 17;
+    exampleData[1].headers[0].field.size = 4;
+    exampleData[1].headers[0].value.data = test_examples[1]+ 17 + 6;
+    exampleData[1].headers[0].value.size = 18;
+    /* User Agent */
+    exampleData[1].headers[1].field.data = test_examples[1] + 17 + 26 + 49 + 20;
+    exampleData[1].headers[1].field.size = 10;
+    exampleData[1].headers[1].value.data = test_examples[1] + 17 + 26 + 49 + 20 + 10 + 2;
+    exampleData[1].headers[1].value.size = 12;
+
+
+    rtns[0] = test_examples[0] + 25 + 29 + 24 + 35 + 1,
+    rtns[1] = exampleData[1].body.data + exampleData[1].body.size;
+
+    for (index = 0; index<2; index++)
+    {
+        TEST_PRINT_ARG("Checking index: %d.", index);
+
+        memset(&par,0,sizeof(par));
+        rtn = httpParse(&par, test_examples[index], strlen(test_examples[index]),
+                        NULL);
+        ERROR_CHECK(rtn == NULL,"RTN was NULL");  
+
+        ERROR_CHECK(rtn != rtns[index], "rtn was not last byte.");
+
+        ERROR_CHECK(exampleData[index].type != par.type,
+                    "Type not correct.");
+        ERROR_CHECK(exampleData[index].resource.size != par.resource.size,
+                    "Resource size not correct.");
+        ERROR_CHECK(exampleData[index].resource.data != par.resource.data,
+                    "Resource data not correct.");  
+        ERROR_CHECK(exampleData[index].version.major != par.version.major,
+                    "Version major not correct."); 
+        ERROR_CHECK(exampleData[index].version.minor != par.version.minor,
+                    "Version minor not correct."); 
+        ERROR_CHECK(exampleData[index].content.size != par.content.size,
+                    "Content size not correct.");
+        ERROR_CHECK(exampleData[index].content.data != par.content.data,
+                    "Content data not correct.");  
+
+        for (hindex = 0; hindex< MAX_HEADERS; hindex++)
+        {
+            TEST_PRINT_ARG("Checking header index: %d.", hindex);
+
+            ERROR_CHECK(par.headers[hindex].field.data   != 
+                        exampleData[index].headers[hindex].field.data,
+                        "Header field data not as expected");
+            ERROR_CHECK(par.headers[hindex].field.size !=
+                        exampleData[index].headers[hindex].field.size,
+                        "Header field size not as expected");
+            ERROR_CHECK(par.headers[hindex].value.data   != 
+                        exampleData[index].headers[hindex].value.data,
+                        "Header value data not as expected");
+            ERROR_CHECK(par.headers[hindex].value.size !=
+                        exampleData[index].headers[hindex].value.size,
+                        "Header value size not as expected");
+        }
+    }
+}
 
 
 int main(void) 
 {
-#if 0
-    httpParser par;
-#endif 
     httpRegisterControl(&control);
-#if 0
-    httpParse(tst_get, strlen(tst_get), NULL);
-#endif
-#if 0
-    httpParse(&par, tst_put, strlen(tst_put), NULL);
-#endif
-#if 0
-    httpParse(&par, tst_root, strlen(tst_root), NULL);
-#endif
 
 #if 1
     test_startLinesValid();
@@ -672,6 +758,8 @@ int main(void)
     test_bodyValid();
     test_bodyInvalid();
 #endif
+    test_examples();
+    
     test_print(&testData);
     return 0;
 }

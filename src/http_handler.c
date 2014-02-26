@@ -1,15 +1,12 @@
-#include "http_handler.h"
-
-#if 0
-#include "http_parser.h"
-#endif
-
 #include <string.h>
 #include <strings.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <limits.h>
+
+
+#include "http_handler.h"
 
 #ifdef METHOD
     #undef METHOD
@@ -20,6 +17,7 @@ static const char * methodStrings[] = {
     "INVALID"
 };
 
+/* unsigned only */
 #define SMALLER(X,Y) ((uint32_t)(X)<(uint32_t)(Y) ? (uint32_t)X : (uint32_t)Y)
 
 /* Length of string offset from an offset when  string start and length
@@ -312,7 +310,7 @@ static const char * parseStartLine(const char * data,
         return NULL;
     }
     
-    for (type = 0; type < METHOD_INVALID; type++)
+    for (type = 0; type < METHOD_TYPE_MAX; type++)
     {
         if (*c == *methodStrings[type])
         {
@@ -332,7 +330,7 @@ static const char * parseStartLine(const char * data,
         }
     }
 
-    if (type == METHOD_INVALID)
+    if (type == METHOD_TYPE_MAX)
     {
         HTTP_PRINT_LINE("FAIL");
         return NULL;
@@ -439,6 +437,8 @@ static const char * parseStartLine(const char * data,
 
 /* data is pointer to first byte on a new line */
 /* TODO content length probably important to nab here. maybe content type as well */
+/* @return NULL on error. On success it returns a pointer to the first byte
+ *         in the blank seperator line. */
 static const char * parseHeaders(const char * data,
                                  uint16_t size,
                                  httpParser * par)
@@ -447,7 +447,7 @@ static const char * parseHeaders(const char * data,
     header header;
     const char * lineStart = data;
     const char * eol = getEndOfLine(data,size);
-    uint8_t loopIteration = 0;
+    uint8_t headersIndex = 0;
 
     HTTP_PRINT_LINE_ARGS("IN %s.", __FUNCTION__);
     if (eol == NULL)
@@ -472,14 +472,16 @@ static const char * parseHeaders(const char * data,
         /* body seperator */
         if (eol == lineStart)
         {
-            break;
+            return eol; /* Only valid return */
         }
 
-        /* Check for blank line */
+#if 0
+        /* Check for blank line */ /* TODO what is this doing? redundant by the above? */
         if (strncmp(data, HTTP_EOL_STR, P_DIFF_LEN(eol,data)) == 0)
         {
             return data;    /* pointer to newline seperating body */
         }
+#endif
 
         /* Must be a header then. Get field. */
         header.field.data = data;
@@ -575,9 +577,10 @@ static const char * parseHeaders(const char * data,
         }
 
         /* Only store if room */
-        else if (loopIteration<MAX_HEADERS)
+        else if (headersIndex<MAX_HEADERS)
         {
-            par->headers[loopIteration] = header;
+            par->headers[headersIndex] = header;
+            headersIndex++;
         }
 
         HTTP_PRINT_LINE_ARGS("ALAN DEBUG. Going to try to grab next line."
@@ -607,14 +610,15 @@ static const char * parseHeaders(const char * data,
         }
 
         data=lineStart;
-        loopIteration++;
     }
 
-   return eol;/* TODO this must always return a pointer to empty line*/
+   return NULL;
 }
 
 
 /* TODO assuming data point to the blank line */
+/* @return NULL on errror. Upon success it points to the last byte contained
+ *         in the body */
 static const char * parseBody(const char * data,
                                   uint16_t size,
                                   httpParser * par)
@@ -699,28 +703,27 @@ const char * httpParse(httpParser * par, const char * data, uint16_t size, void 
         return NULL;
     }
      
-#if 0
-    else if ((dataRtnd = getNextLine(dataRtnd, P_OFFSET_LEN(data, size, 
-                                                          dataRtnd))) == NULL)
+    /* Has a body been reported ?*/
+    if (par->body.size)
     {
-        HTTP_PRINT_LINE("getNextLine failed.");
-
-        /* TODO assuming the main reason for this failing is there is no body. 
-         * in future check against content length */
-        return data;
-        return NULL;
+        if ((dataRtnd = parseBody(dataRtnd, P_OFFSET_LEN(data, size, dataRtnd),
+                                           par)) == NULL)
+        {
+            HTTP_PRINT_LINE("Parse Data Failed.");
+            return NULL;
+        }
+        else
+        {
+            return dataRtnd;
+        }
     }
-#endif
-
-
-    else if ((dataRtnd = parseBody(dataRtnd, P_OFFSET_LEN(data, size, dataRtnd),
-                                       par)) == NULL)
+    else 
     {
-        HTTP_PRINT_LINE("Parse Data Failed.");
-        return NULL;
+        /* No body. Sitting on the blank line at the end of headers. */
+        return dataRtnd+HTTP_EOL_LEN-1;
     }
     
-    return data; /* TODO */
+    return NULL; /* TODO */
 }
 
 

@@ -1,3 +1,6 @@
+#ifndef __HTTP_HANDLER__
+#define __HTTP_HANDLER__
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -16,7 +19,6 @@
 #define RECEIVE_BUFFER_LAST_INDEX   (RECEIVE_BUFFER_SIZE - 1)
 
 #define TRANSMIT_BUFFER_SIZE        1024
-
 
 #define HTTP_EOL_STR                "\r\n"
 #define HTTP_EOL_LEN                2
@@ -61,7 +63,7 @@
     METHOD(POST)    \
     METHOD(TRACE)   \
     METHOD(OPTIONS) \
-    METHOD(DELETE)  \
+    METHOD(DELETE)  
 
 #ifdef METHOD
     #undef METHOD
@@ -70,8 +72,19 @@
 
 typedef enum {
     METHODS
-    METHOD_INVALID
+    METHOD_TYPE_MAX
 } methodType;
+
+#ifdef METHOD
+    #undef METHOD
+#endif 
+#define METHOD(M)    M ## _MASK = 0x1<<M,
+
+typedef enum {
+    METHODS
+    METHODS_MASK_MAX
+} methodMask;
+
 
 typedef struct {
     const char * data; 
@@ -97,21 +110,10 @@ typedef struct {
     buf body;
 } httpParser;
 
-#if 0
-typedef struct {
-    char buffer[RECEIVE_BUFFER_SIZE];
-    uint16_t start;
-    uint16_t end;
-    uint16_t taken;
-} readBuffer;
-#endif
-
-
 typedef enum {
     HEADER_TYPE_NONE,
     CONTENT_TYPE
 } headerType;
-
 
 typedef uint32_t (*methodCallback)(const char * body, const char * data,
                                    uint16_t size, void * user);
@@ -121,26 +123,33 @@ typedef struct {
     methodCallback callback;
 } methodInformation;
 
-
 typedef struct {
+#if 0
     char name[MAX_RESOURCE_NAME_SIZE];
-    methodType methodsMask; /* Mask of all supported methods */
+#endif
+    const char * name;
+    methodMask methodsMask; /* Mask of all supported methods */ 
     methodInformation methods[MAX_METHODS];
 } resourceInformation;
 
-
+#if 0
 typedef struct {
     resourceInformation * resource;
     methodInformation * method;
     headerType nextHeaderValue;
     bool completed;
 } parsingInformation;
-
+#endif
 
 typedef struct { 
+#if 0
     char deviceName[MAX_DEVICE_NAME_SIZE]; 
+#endif
+    const char * deviceName;
     resourceInformation resources[MAX_RESOURCES];
+#if 0
     parsingInformation parsed;
+#endif
 } controlInformation;
 
 const char * httpParse(httpParser * par, const char * data, const uint16_t size,
@@ -149,4 +158,5 @@ const char * httpParse(httpParser * par, const char * data, const uint16_t size,
 void httpRegisterControl(controlInformation * control);
 
 
+#endif /* __HTTP_HANDLER__ */
 
