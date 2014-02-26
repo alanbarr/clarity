@@ -1,7 +1,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "http_handler.h"
+#include "http_parser.h"
 
 #define TEST_PRINT(S) \
     printf("TEST (%s:%d) " S "\n", __FILE__, __LINE__)

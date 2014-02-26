@@ -9,7 +9,7 @@ CFLAGS=-Wall -g -pedantic
 #CLARITY_SRC= $(SRC_DIR)/http_handler.c \
 #			 $(LIB_DIR)/http-parser/http_parser.c
 #
-CLARITY_SRC= $(SRC_DIR)/http_handler.c
+CLARITY_SRC= $(SRC_DIR)/http_parser.c
 CLAITY_INC= -I$(SRC_DIR)
 
 JOY_SRC= $(LIB_DIR)/http-parser/http_parser.c

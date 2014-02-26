@@ -1,5 +1,5 @@
-#ifndef __HTTP_HANDLER__
-#define __HTTP_HANDLER__
+#ifndef __HTTP_PARSER__
+#define __HTTP_PARSER__
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -158,5 +158,5 @@ const char * httpParse(httpInfo * par, const char * data, const uint16_t size,
 void httpRegisterControl(controlInformation * control);
 
 
-#endif /* __HTTP_HANDLER__ */
+#endif /* __HTTP_PARSER__ */
 
