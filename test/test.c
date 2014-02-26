@@ -2,28 +2,14 @@
 #include <stdio.h>
 
 #include "http_parser.h"
-
-#define TEST_PRINT(S) \
-    printf("TEST (%s:%d) " S "\n", __FILE__, __LINE__)
-
-#define TEST_PRINT_ARG(S, ...) \
-    printf("TEST (%s:%d) " S "\n", __FILE__, __LINE__, __VA_ARGS__)
-
-#define ERROR_CHECK(BOOL, STR) \
-    test_check(&testData, BOOL, STR, __FILE__, __LINE__)
-
-typedef struct {
-    uint32_t checks;
-    uint32_t passes;
-    uint32_t fails;
-} testInformation;
+#include "test.h"
 
 static testInformation testData;
 
-uint32_t mcb(const char * body, const char * data, const uint16_t size, void * user);
-uint32_t getRoot(const char * body, const char * data, const uint16_t size, void * user);
+uint32_t mcb(const httpInformation * info, void * user);
+uint32_t getRoot(const httpInformation * info, void * user);
 
-controlInformation control =  /* TODO only one? */
+static controlInformation control =  /* TODO only one? */
 {
     "Test_Control",     /* Device Name */
     /* Resources */
@@ -77,28 +63,14 @@ controlInformation control =  /* TODO only one? */
 
 
 
-uint32_t mcb(const char * body, const char * data, const uint16_t size, void * user)
+uint32_t mcb(const httpInformation * info, void * user)
 {
     TEST_PRINT("in MCB CB!!");
     return 0;
 }   
 
-uint32_t getRoot(const char * body, const char * data, const uint16_t size, void * user)
+uint32_t getRoot(const httpInformation * info, void * user)
 {
-
-#if 0
-    static char * html = 
-        "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">"
-        "<html><head>"
-        "<title>403 Forbidden</title>"
-        "</head><body>"
-        "<h1>Forbidden</h1>"
-        "<p>You don't have permission to access /"
-        "on this server.</p>"
-        "</body></html>";
-#endif
-
-
     TEST_PRINT("IN GET ROOT");
 
     return 0;
@@ -133,7 +105,7 @@ static void test_print(testInformation * test)
 static int test_startLinesValid(void)
 {
     int i;
-    httpInfo par;
+    httpInformation par;
     const char * rtn = NULL;
 
     static const char * startLinesValid[] = {
@@ -153,7 +125,7 @@ static int test_startLinesValid(void)
          "\r\n"
     };
 
-    static httpInfo startLineDataValid[7];
+    static httpInformation startLineDataValid[7];
 
     memset(&startLineDataValid, 0, sizeof(startLineDataValid));
 
@@ -204,8 +176,7 @@ static int test_startLinesValid(void)
         TEST_PRINT_ARG("loop iternation %d.", i);
         memset(&par, 0, sizeof(par));
 
-        rtn = httpParse(&par, startLinesValid[i], strlen(startLinesValid[i]),
-                        NULL);
+        rtn = httpParse(&par, startLinesValid[i], strlen(startLinesValid[i]));
 
         ERROR_CHECK(rtn == NULL,"RTN was NULL");
      
@@ -226,7 +197,7 @@ static int test_startLinesValid(void)
 static int test_startLinesInvalid(void)
 {
     int i;
-    httpInfo par;
+    httpInformation par;
     const char * rtn = NULL;
     
     static const char * startLinesInvalid[] = {
@@ -252,8 +223,7 @@ static int test_startLinesInvalid(void)
     for (i=0;i<7;i++)
     {
         memset(&par, 0, sizeof(par));
-        rtn = httpParse(&par, startLinesInvalid[i], strlen(startLinesInvalid[i]),
-                        NULL);
+        rtn = httpParse(&par, startLinesInvalid[i], strlen(startLinesInvalid[i]));
         ERROR_CHECK(rtn != NULL,"RTN was not NULL");
     }
     return 1;
@@ -263,9 +233,9 @@ static int test_headersValid(void)
 {
     int index;
     int hindex;
-    httpInfo par;
+    httpInformation par;
     const char * rtn = NULL;
-    static httpInfo headerData[3];
+    static httpInformation headerData[3];
 
     static const char * headersValid[] = {
     "DELETE /robots.txt HTTP/0.9 \r\n"
@@ -361,8 +331,7 @@ static int test_headersValid(void)
         TEST_PRINT_ARG("Checking index: %d.", index);
 
         memset(&par,0,sizeof(par));
-        rtn = httpParse(&par, headersValid[index], strlen(headersValid[index]),
-                        NULL);
+        rtn = httpParse(&par, headersValid[index], strlen(headersValid[index]));
         ERROR_CHECK(rtn == NULL,"RTN was NULL");  
         ERROR_CHECK(headerData[index].type != par.type,
                     "Type not correct.");
@@ -405,9 +374,9 @@ static int test_headersInvalid(void)
 {
     int index;
     int hindex;
-    httpInfo par;
+    httpInformation par;
     const char * rtn = NULL;
-    static httpInfo headerData[2];
+    static httpInformation headerData[2];
 
     static const char * headersInvalid[] = {
     "GET / HTTP/1.0 \r\n"
@@ -452,8 +421,7 @@ static int test_headersInvalid(void)
         TEST_PRINT_ARG("Checking index: %d.", index);
 
         memset(&par,0,sizeof(par));
-        rtn = httpParse(&par, headersInvalid[index], strlen(headersInvalid[index]),
-                        NULL);
+        rtn = httpParse(&par, headersInvalid[index], strlen(headersInvalid[index]));
 
         ERROR_CHECK(rtn != NULL,"RTN was not NULL");
 
@@ -492,7 +460,7 @@ static int test_headersInvalid(void)
 
 static int test_bodyValid(void)
 {
-    httpInfo par;
+    httpInformation par;
     int index;
     const char * rtn;
 
@@ -512,7 +480,7 @@ static int test_bodyValid(void)
         "BODY12345678910"                   
     };
 
-    static httpInfo bodyData[2];
+    static httpInformation bodyData[2];
 
     bodyData[0].type = GET; 
     bodyData[0].resource.size = 1; 
@@ -539,8 +507,7 @@ static int test_bodyValid(void)
         TEST_PRINT_ARG("Checking index: %d.", index);
 
         memset(&par,0,sizeof(par));
-        rtn = httpParse(&par, bodiesValid[index], strlen(bodiesValid[index]),
-                        NULL);
+        rtn = httpParse(&par, bodiesValid[index], strlen(bodiesValid[index]));
         ERROR_CHECK(rtn == NULL,"RTN was NULL");
         ERROR_CHECK(par.body.data != bodyData[index].body.data,
                     "Body Data not as expected.");
@@ -558,7 +525,7 @@ static int test_bodyValid(void)
 
 static int test_bodyInvalid(void)
 {
-    httpInfo par;
+    httpInformation par;
     int index;
     const char * rtn;
 
@@ -576,7 +543,7 @@ static int test_bodyInvalid(void)
         "BODY",            
     };
 
-    static httpInfo bodyData[2];
+    static httpInformation bodyData[2];
 
     bodyData[0].type = PUT; 
     bodyData[0].resource.size = 1; 
@@ -604,8 +571,7 @@ static int test_bodyInvalid(void)
         TEST_PRINT_ARG("Checking index: %d.", index);
 
         memset(&par,0,sizeof(par));
-        rtn = httpParse(&par, bodiesInvalid[index], strlen(bodiesInvalid[index]),
-                        NULL);
+        rtn = httpParse(&par, bodiesInvalid[index], strlen(bodiesInvalid[index]));
         ERROR_CHECK(rtn != NULL,"RTN was not NULL");
         ERROR_CHECK(par.body.data != bodyData[index].body.data,
                     "Body Data not as expected.");
@@ -627,7 +593,7 @@ static void test_examples(void)
     const char * rtns[2];
     int index;
     int hindex;
-    httpInfo par;
+    httpInformation par;
 
     static const char * test_examples[] ={
     "GET /robots.txt HTTP/1.0\r\n"          
@@ -646,7 +612,7 @@ static void test_examples(void)
     "POINT JUST BEFORE HERE."
     };
 
-    static httpInfo exampleData[2];
+    static httpInformation exampleData[2];
 
     memset(exampleData, 0, sizeof(exampleData));
 
@@ -704,8 +670,7 @@ static void test_examples(void)
         TEST_PRINT_ARG("Checking index: %d.", index);
 
         memset(&par,0,sizeof(par));
-        rtn = httpParse(&par, test_examples[index], strlen(test_examples[index]),
-                        NULL);
+        rtn = httpParse(&par, test_examples[index], strlen(test_examples[index]));
         ERROR_CHECK(rtn == NULL,"RTN was NULL");  
 
         ERROR_CHECK(rtn != rtns[index], "rtn was not last byte.");

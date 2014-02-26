@@ -1,4 +1,5 @@
 SRC_DIR=../src
+API_DIR=../api
 LIB_DIR=../lib
 
 CC=gcc
@@ -9,8 +10,8 @@ CFLAGS=-Wall -g -pedantic
 #CLARITY_SRC= $(SRC_DIR)/http_handler.c \
 #			 $(LIB_DIR)/http-parser/http_parser.c
 #
-CLARITY_SRC= $(SRC_DIR)/http_parser.c
-CLAITY_INC= -I$(SRC_DIR)
+CLARITY_SRC= $(SRC_DIR)/http_parser.c $(SRC_DIR)/http_handler.c
+CLAITY_INC= -I$(SRC_DIR) -I$(API_DIR)
 
 JOY_SRC= $(LIB_DIR)/http-parser/http_parser.c
 JOY_INC= -I$(LIB_DIR)/http-parser

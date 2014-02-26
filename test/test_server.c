@@ -1,7 +1,5 @@
 #include <string.h>
 #include <stdio.h>
-#include "http_parser.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -15,6 +13,9 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <unistd.h>
+
+#include "clarity_api.h"
+#include "http_parser.h"
 
 #define ADDR_STR "localhost"
 #define PORT_STR "56123"
@@ -69,7 +70,7 @@ static void setupControl(controlInformation * control)
     control->resources[2].methods[1].callback = generalPut;
 }
 
-static void runServer(void)
+static void runServer(controlInformation * control)
 {
     int sockfd;
     struct addrinfo hints;
@@ -112,7 +113,7 @@ static void runServer(void)
         int bytes;
         char buf[200];
         const char * httpRtn = NULL;
-        httpInfo par; 
+        httpInformation info; 
 
         TEST_PRINT("Attempting accept.");
 
@@ -132,7 +133,7 @@ static void runServer(void)
 
         TEST_PRINT_ARG("recv returns with %d",bytes);
 
-        if (NULL == ((httpRtn = httpParse(&par, buf, bytes, NULL))))
+        if (NULL == ((httpRtn = clarityProcess(control, &info, buf, bytes, NULL))))
         {
             TEST_PRINT("httpParse returned NULL");
             break;
@@ -149,9 +150,8 @@ int main(void)
 {
     controlInformation control;
     setupControl(&control);
-    httpRegisterControl(&control);
 
-    runServer();
+    runServer(&control);
     TEST_PRINT("Exiting");
     
     

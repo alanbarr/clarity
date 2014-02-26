@@ -5,7 +5,6 @@
 #include <errno.h>
 #include <limits.h>
 
-
 #include "http_parser.h"
 
 #ifdef METHOD
@@ -16,25 +15,6 @@ static const char * methodStrings[] = {
     METHODS
     "INVALID"
 };
-
-/* unsigned only */
-#define SMALLER(X,Y) ((uint32_t)(X)<(uint32_t)(Y) ? (uint32_t)X : (uint32_t)Y)
-
-/* Length of string offset from an offset when  string start and length
- * are known*/
-#define P_OFFSET_LEN(START, LENGTH, OFFSET)   ((START+LENGTH) - (OFFSET))
-
-/* TODO macro for pointer length via subtraction. */
-#define P_DIFF_LEN(BIGGER, SMALLER) (BIGGER - SMALLER + 1)
-
-
-static controlInformation * control = NULL; 
- 
-
-void httpRegisterControl(controlInformation * userControl)
-{
-    control = userControl;
-}
 
 
 /* Returns first end of line character (i.e. if CRLF returns pointer to CR)*/
@@ -84,7 +64,7 @@ static const char * getNextLine(const char * data, uint16_t size)
 
 static const char * parseStartLine(const char * data,
                                    uint16_t size,
-                                   httpInfo * par)
+                                   httpInformation * info)
 {
     const char * c = data;
     const char * resource = NULL;
@@ -138,7 +118,7 @@ static const char * parseStartLine(const char * data,
         return NULL;
     }
 
-    par->type = type;
+    info->type = type;
 
     c += strlen(methodStrings[type]);
     
@@ -197,7 +177,7 @@ static const char * parseStartLine(const char * data,
         }
         else
         {
-            (par->version.major = *c - 48);
+            (info->version.major = *c - 48);
         }
 
         /* Check for dp */
@@ -217,13 +197,13 @@ static const char * parseStartLine(const char * data,
         }
         else
         {
-            (par->version.minor = *c - ASCII_DIGIT_OFFSET);
+            (info->version.minor = *c - ASCII_DIGIT_OFFSET);
         }
     }
 
     /* Update Resource */
-    par->resource.data = resource;
-    par->resource.size = version - resource - HTTP_SPACE_LEN;
+    info->resource.data = resource;
+    info->resource.size = version - resource - HTTP_SPACE_LEN;
 
     /* Success */
     return eol; /* todo range */
@@ -236,7 +216,7 @@ static const char * parseStartLine(const char * data,
  *         in the blank seperator line. */
 static const char * parseHeaders(const char * data,
                                  uint16_t size,
-                                 httpInfo * par)
+                                 httpInformation * info)
 {
     const char * const dataStart = data;
     header header;
@@ -326,7 +306,7 @@ static const char * parseHeaders(const char * data,
         if (strncasecmp(header.field.data, HTTP_CONTENT_TYPE_STR,
                         SMALLER(HTTP_CONTENT_TYPE_LEN, header.field.size)) == 0)
         {
-            par->content = header.value;
+            info->content = header.value;
         }
 
         else if (strncasecmp(header.field.data, HTTP_CONTENT_LENGTH_STR,
@@ -368,13 +348,13 @@ static const char * parseHeaders(const char * data,
                 return NULL;
             }
             
-            par->body.size = length; /* TODO needs validated later */
+            info->body.size = length; /* TODO needs validated later */
         }
 
         /* Only store if room */
         else if (headersIndex<MAX_HEADERS)
         {
-            par->headers[headersIndex] = header;
+            info->headers[headersIndex] = header;
             headersIndex++;
         }
 
@@ -416,7 +396,7 @@ static const char * parseHeaders(const char * data,
  *         in the body */
 static const char * parseBody(const char * data,
                                   uint16_t size,
-                                  httpInfo * par)
+                                  httpInformation * info)
 {
     const char * body = NULL;
 
@@ -426,9 +406,9 @@ static const char * parseBody(const char * data,
         return NULL;
     }
     
-    if (size - HTTP_EOL_LEN < par->body.size)
+    if (size - HTTP_EOL_LEN < info->body.size)
     {   
-        par->body.size = 0;
+        info->body.size = 0;
         return NULL;
     }
 
@@ -443,21 +423,20 @@ static const char * parseBody(const char * data,
         return NULL;
     }
 
-    par->body.data = body;
+    info->body.data = body;
 
-    return body + par->body.size;
+    return body + info->body.size;
 }
 
 
 
-const char * httpParse(httpInfo * par, const char * data, uint16_t size, void * user)
+const char * httpParse(httpInformation * info, const char * data, uint16_t size)
 {
     const char * dataRtnd;
-    (void)user;
  
-    memset(par, 0, sizeof(*par));
+    memset(info, 0, sizeof(*info));
 
-    if ((dataRtnd = parseStartLine(data, size, par)) == NULL)
+    if ((dataRtnd = parseStartLine(data, size, info)) == NULL)
     {
         HTTP_PRINT_LINE("Parse Start Line Failed.");
         return NULL;
@@ -472,17 +451,17 @@ const char * httpParse(httpInfo * par, const char * data, uint16_t size, void * 
 
     else if ((dataRtnd = parseHeaders(dataRtnd,
                                           P_OFFSET_LEN(data, size, dataRtnd),
-                                          par)) == NULL)
+                                          info)) == NULL)
     {
         HTTP_PRINT_LINE("Parse Headers Failed.");
         return NULL;
     }
      
     /* Has a body been reported ?*/
-    if (par->body.size)
+    if (info->body.size)
     {
         if ((dataRtnd = parseBody(dataRtnd, P_OFFSET_LEN(data, size, dataRtnd),
-                                           par)) == NULL)
+                                           info)) == NULL)
         {
             HTTP_PRINT_LINE("Parse Data Failed.");
             return NULL;
