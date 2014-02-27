@@ -37,6 +37,8 @@ size_mine: test_size_mine.c
 
 
 clean:
-	rm test
+	rm -f test_parser
+	rm -f test_server
+	rm -f test_server_client
 
 .PHONY: clean

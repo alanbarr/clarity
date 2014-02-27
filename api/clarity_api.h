@@ -26,13 +26,16 @@
 #endif 
 #define METHOD(M)    M,
 
+# if 0
 #define METHOD_TO_MASK(M) (0x1<<M)
+#endif 
 
 typedef enum {
     METHODS
     METHOD_TYPE_MAX
 } methodType;
 
+#if 0
 #ifdef METHOD
     #undef METHOD
 #endif 
@@ -42,6 +45,7 @@ typedef enum {
     METHODS
     METHODS_MASK_MAX
 } methodMask;
+#endif
 
 typedef struct {
     const char * data; 
@@ -81,7 +85,9 @@ typedef struct {
 
 typedef struct {
     const char * name;
+#if 0
     methodMask methodsMask; /* Mask of all supported methods */ 
+#endif
     methodInformation methods[MAX_METHODS];
 } resourceInformation;
 

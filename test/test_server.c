@@ -52,17 +52,14 @@ static void setupControl(controlInformation * control)
     control->deviceName = "Test_Control";
 
     control->resources[0].name = "/";
-    control->resources[0].methodsMask = GET_MASK;
     control->resources[0].methods[0].type = GET;
     control->resources[0].methods[0].callback = generalGet;
  
     control->resources[1].name = "/path/script.cgi";
-    control->resources[1].methodsMask = POST_MASK;
     control->resources[1].methods[0].type = POST;
     control->resources[1].methods[0].callback = generalPost;
  
     control->resources[2].name = "/robots.txt";
-    control->resources[2].methodsMask = GET_MASK | PUT_MASK;
     control->resources[2].methods[0].type = GET;
     control->resources[2].methods[0].callback = generalGet;
     control->resources[2].methods[1].type = PUT;
@@ -107,7 +104,7 @@ static void runServer(controlInformation * control)
     while(1)
     {
         struct sockaddr addrthem;
-        socklen_t addrlenthem;
+        socklen_t addrlenthem = sizeof(addrthem);
         int newfd;
         int bytes;
         char buf[200];
@@ -119,7 +116,7 @@ static void runServer(controlInformation * control)
         if (-1 == (newfd = accept(sockfd, &addrthem, &addrlenthem)))
         {
             TEST_PRINT("accept failed.");
-            break;
+            continue;
         }
 
         TEST_PRINT("accept ok");

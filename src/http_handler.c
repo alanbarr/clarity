@@ -18,10 +18,12 @@ static bool getMethod(resourceInformation * resInfo, methodType method,
 {
     uint8_t methIndex;
 
+#if 0
     if ((resInfo->methodsMask & METHOD_TO_MASK(method)) == 0) /* TODO consider getting rid of mask */
     {
         return false;
     }
+#endif
 
     for (methIndex=0; methIndex<MAX_METHODS; methIndex++)
     {

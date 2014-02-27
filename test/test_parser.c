@@ -32,7 +32,6 @@ static controlInformation control =  /* TODO only one? */
         /* Resource 1 */
         {
             "/",
-            GET,
             /* Methods */
             {
                 {
@@ -44,7 +43,6 @@ static controlInformation control =  /* TODO only one? */
         /* Resource 2 */
         {
             "/path/script.cgi", /* Resource Name */
-            POST,               /* Methods Supported Mask */
             /* Methods */
             {
                 /* Method 1 */
@@ -57,7 +55,6 @@ static controlInformation control =  /* TODO only one? */
         /* Resource 3 */
         {
             "/robots.txt",   /* Resource Name */
-            GET | PUT,       /* Methods Supported Mask */
             /* Methods */
             {
                 /* Method 1 */
