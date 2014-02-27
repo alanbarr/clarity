@@ -1,8 +1,23 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "clarity_api.h"
 #include "http_parser.h"
-#include "test.h"
+
+#define TEST_PRINT(S) \
+    printf("TEST (%s:%d) " S "\n", __FILE__, __LINE__)
+
+#define TEST_PRINT_ARG(S, ...) \
+    printf("TEST (%s:%d) " S "\n", __FILE__, __LINE__, __VA_ARGS__)
+
+#define ERROR_CHECK(BOOL, STR) \
+    test_check(&testData, BOOL, STR, __FILE__, __LINE__)
+
+typedef struct {
+    uint32_t checks;
+    uint32_t passes;
+    uint32_t fails;
+} testInformation;
 
 static testInformation testData;
 

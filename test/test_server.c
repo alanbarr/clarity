@@ -15,7 +15,6 @@
 #include <unistd.h>
 
 #include "clarity_api.h"
-#include "http_parser.h"
 
 #define ADDR_STR "localhost"
 #define PORT_STR "56123"

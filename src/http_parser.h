@@ -1,16 +1,6 @@
 #ifndef __HTTP_PARSER__
 #define __HTTP_PARSER__
 
-#include "clarity_api.h"
-
-
-#if 0
-#define RECEIVE_BUFFER_SIZE         1024
-#define RECEIVE_BUFFER_LAST_INDEX   (RECEIVE_BUFFER_SIZE - 1)
-
-#define TRANSMIT_BUFFER_SIZE        1024
-#endif
-
 #define HTTP_EOL_STR                "\r\n"
 #define HTTP_EOL_LEN                2
 
@@ -19,7 +9,6 @@
 
 #define HTTP_CONTENT_LENGTH_STR     "Content-Length: " 
 #define HTTP_CONTENT_LENGTH_LEN     16
-
 
 #define HTTP_VERSION_LEN            8   /* "HTTP/X.X" */
                                     /* "GET / " VERSION \r\n */

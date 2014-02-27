@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <limits.h>
 
+#include "clarity_api.h"
 #include "http_parser.h"
 
 #ifdef METHOD
@@ -15,7 +16,6 @@ static const char * methodStrings[] = {
     METHODS
     "INVALID"
 };
-
 
 /* Returns first end of line character (i.e. if CRLF returns pointer to CR)*/
 static const char * getEndOfLine(const char * data, uint16_t size)
@@ -479,7 +479,5 @@ const char * httpParse(httpInformation * info, const char * data, uint16_t size)
     
     return NULL; /* TODO */
 }
-
-
 
 
