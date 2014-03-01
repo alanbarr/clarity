@@ -725,8 +725,6 @@ static void test_examples(void)
 
 int main(void) 
 {
-    httpRegisterControl(&control);
-
 #if 1
     test_startLinesValid();
     test_startLinesInvalid();

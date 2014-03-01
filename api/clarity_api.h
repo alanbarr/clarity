@@ -99,7 +99,6 @@ typedef struct {
 const char * httpParse(httpInformation * info,
                        const char * data, const uint16_t size);
 
-void httpRegisterControl(controlInformation * control);
 const char * clarityProcess(controlInformation * control, 
                             httpInformation * info, 
                             const char * data, uint16_t size, void * user);

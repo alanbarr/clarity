@@ -2,11 +2,6 @@
 #include <strings.h>
 
 
-void httpRegisterControl(controlInformation * userControl)
-{
-    /* TODO delete me */
-}
-
 /* TODO use to cut short processing */
 bool httpHandlerCheckResouceMethod(httpInformation * info)
 {
