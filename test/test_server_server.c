@@ -25,22 +25,20 @@
 #define TEST_PRINT_ARG(S, ...) \
     printf("TEST (%s:%d) " S "\n", __FILE__, __LINE__, __VA_ARGS__)
 
-static uint32_t generalPut(const char * body, const char * data, 
-                           const uint16_t size, void * user)
+static uint32_t generalPut(const httpInformation * info, 
+                           connectionInformation * conn)
 {   
     TEST_PRINT_ARG("In %s.", __FUNCTION__);
     return 0;
 }   
 
-uint32_t generalGet(const char * body, const char * data,
-                    const uint16_t size, void * user)
+uint32_t generalGet(const httpInformation * info, connectionInformation * conn)
 {
     TEST_PRINT_ARG("In %s.", __FUNCTION__);
     return 0;
 }   
 
-uint32_t generalPost(const char * body, const char * data,
-                     const uint16_t size, void * user)
+uint32_t generalPost(const httpInformation * info, connectionInformation * conn)
 {
     TEST_PRINT_ARG("In %s.", __FUNCTION__);
     return 0;
@@ -73,6 +71,7 @@ static void runServer(controlInformation * control)
     struct addrinfo *servinfo;
 
     memset(&hints, 0 , sizeof(hints));
+
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM; 
     hints.ai_flags = AI_PASSIVE;     
@@ -129,7 +128,9 @@ static void runServer(controlInformation * control)
 
         TEST_PRINT_ARG("recv returns with %d",bytes);
 
-        if (NULL == ((httpRtn = clarityProcess(control, &info, buf, bytes, NULL))))
+        if (NULL == ((httpRtn = clarityProcess(control, &info, 
+                                               (connectionInformation *) NULL,
+                                               buf, bytes))))
         {
             TEST_PRINT("httpParse returned NULL");
             break;

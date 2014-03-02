@@ -428,13 +428,10 @@ static const char * parseBody(const char * data,
     return body + info->body.size;
 }
 
-
-
-const char * httpParse(httpInformation * info, const char * data, uint16_t size)
+static const char * httpParseRequest(httpInformation * info, const char * data,
+                                     uint16_t size)
 {
-    const char * dataRtnd;
- 
-    memset(info, 0, sizeof(*info));
+    const char * dataRtnd = NULL;
 
     if ((dataRtnd = parseStartLine(data, size, info)) == NULL)
     {
@@ -475,6 +472,53 @@ const char * httpParse(httpInformation * info, const char * data, uint16_t size)
     {
         /* No body. Sitting on the blank line at the end of headers. */
         return dataRtnd+HTTP_EOL_LEN-1;
+    }
+}
+
+static const char * httpParseResponse(httpInformation * info, const char * data,
+                                      uint16_t size)
+{
+    (void)info;
+    (void)data;
+    (void)size;
+    return NULL;
+}
+
+
+const char * httpParse(httpInformation * info, const char * data, uint16_t size)
+{
+    unsigned char first = 0;
+    unsigned char second = 0;
+ 
+    memset(info, 0, sizeof(*info));
+
+    if (size<2)
+    {
+        return NULL;
+    }
+    
+    first = toupper((int)*data);
+
+    switch (first)
+    {
+        case 'G':
+        case 'P':
+        case 'T':
+        case 'O':
+        case 'D':
+            return httpParseRequest(info,data,size);
+        case 'H':
+            second = toupper((int)*(data+1));
+            if (second == 'E')
+            {
+                return httpParseRequest(info,data,size);
+            }
+            else
+            {
+                return httpParseResponse(info,data,size);
+            }
+        default:
+            return NULL;
     }
     
     return NULL; /* TODO */

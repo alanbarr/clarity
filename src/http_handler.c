@@ -5,6 +5,7 @@
 /* TODO use to cut short processing */
 bool httpHandlerCheckResouceMethod(httpInformation * info)
 {
+    (void)info;
     return true;
 }
 
@@ -12,13 +13,6 @@ static bool getMethod(resourceInformation * resInfo, methodType method,
                       methodInformation ** methodInfo)
 {
     uint8_t methIndex;
-
-#if 0
-    if ((resInfo->methodsMask & METHOD_TO_MASK(method)) == 0) /* TODO consider getting rid of mask */
-    {
-        return false;
-    }
-#endif
 
     for (methIndex=0; methIndex<MAX_METHODS; methIndex++)
     {
@@ -80,17 +74,18 @@ static bool httpHandle(httpInformation * info,
 
 
 const char * clarityProcess(controlInformation * control,
-                            httpInformation * info,
-                            const char * data, uint16_t size, void * user)
+                            httpInformation * http,
+                            connectionInformation * connection,
+                            const char * data, uint16_t size)
 {
     const char * rtnd = NULL;
     
-    if (NULL == (rtnd = httpParse(info, data, size)))
+    if (NULL == (rtnd = httpParse(http, data, size)))
     {
         return NULL;
     }
 
-    else if (httpHandle(info, control, user) != true)
+    else if (httpHandle(http, control, connection) != true)
     {
         return NULL;
     }

@@ -71,12 +71,13 @@ typedef struct {
     buf body;
 } httpInformation;
 
-typedef enum {
-    HEADER_TYPE_NONE,
-    CONTENT_TYPE
-} headerType;
+typedef struct {
+    int32_t socket;
+    void * user;
+} connectionInformation; 
 
-typedef uint32_t (*methodCallback)(const httpInformation * info, void * user);
+typedef uint32_t (*methodCallback)(const httpInformation * info, 
+                                   connectionInformation * user);
 
 typedef struct {
     methodType type;
@@ -101,7 +102,8 @@ const char * httpParse(httpInformation * info,
 
 const char * clarityProcess(controlInformation * control, 
                             httpInformation * info, 
-                            const char * data, uint16_t size, void * user);
+                            connectionInformation * conn,
+                            const char * data, uint16_t size);
 
 
 #define PRINT_MESSAGES              false
@@ -117,7 +119,7 @@ const char * clarityProcess(controlInformation * control,
         printf("(%s %s:%d): " STR "\r\n", __FUNCTION__, __FILE__, __LINE__, __VA_ARGS__)
 #else
     #define HTTP_PRINT(...) 
-    #define HTTP_PRINT_LINE(...) 
+    #define HTTP_PRINT_LINE(STR) 
     #define HTTP_PRINT_LINE_ARGS(...) 
 #endif
 

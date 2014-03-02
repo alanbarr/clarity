@@ -21,8 +21,8 @@ typedef struct {
 
 static testInformation testData;
 
-uint32_t mcb(const httpInformation * info, void * user);
-uint32_t getRoot(const httpInformation * info, void * user);
+uint32_t mcb(const httpInformation * info, connectionInformation * conn);
+uint32_t getRoot(const httpInformation * info, connectionInformation * conn);
 
 static controlInformation control =  /* TODO only one? */
 {
@@ -75,13 +75,13 @@ static controlInformation control =  /* TODO only one? */
 
 
 
-uint32_t mcb(const httpInformation * info, void * user)
+uint32_t mcb(const httpInformation * info, connectionInformation * conn)
 {
     TEST_PRINT("in MCB CB!!");
     return 0;
 }   
 
-uint32_t getRoot(const httpInformation * info, void * user)
+uint32_t getRoot(const httpInformation * info, connectionInformation * conn)
 {
     TEST_PRINT("IN GET ROOT");
 
