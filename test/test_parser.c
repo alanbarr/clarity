@@ -24,57 +24,6 @@ static testInformation testData;
 uint32_t mcb(const httpInformation * info, connectionInformation * conn);
 uint32_t getRoot(const httpInformation * info, connectionInformation * conn);
 
-static controlInformation control =  /* TODO only one? */
-{
-    "Test_Control",     /* Device Name */
-    /* Resources */
-    {
-        /* Resource 1 */
-        {
-            "/",
-            /* Methods */
-            {
-                {
-                    GET,
-                    getRoot
-                }
-            }
-        },
-        /* Resource 2 */
-        {
-            "/path/script.cgi", /* Resource Name */
-            /* Methods */
-            {
-                /* Method 1 */
-                {
-                    POST,       /* Method Type */
-                    mcb         /* Callback */
-                }
-            }
-        },
-        /* Resource 3 */
-        {
-            "/robots.txt",   /* Resource Name */
-            /* Methods */
-            {
-                /* Method 1 */
-                {
-                    GET,            /* Method Type */
-                    mcb             /* Callback */
-                },
-                /* Method 2 */
-                {
-                    PUT,            /* Method Type */
-                    mcb             /* Callback */
-                }
-            },
-        }
-
-    },
-};
-
-
-
 uint32_t mcb(const httpInformation * info, connectionInformation * conn)
 {
     TEST_PRINT("in MCB CB!!");
@@ -84,10 +33,8 @@ uint32_t mcb(const httpInformation * info, connectionInformation * conn)
 uint32_t getRoot(const httpInformation * info, connectionInformation * conn)
 {
     TEST_PRINT("IN GET ROOT");
-
     return 0;
 }   
-
 
 static void test_check(testInformation * test, 
                        bool error, char * string,

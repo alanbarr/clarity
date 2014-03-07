@@ -1,5 +1,7 @@
-#ifndef __HTTP_PARSER__
-#define __HTTP_PARSER__
+#ifndef __HTTP_H__
+#define __HTTP_H__
+
+#define HTTP_VERSION_STR            "HTTP/1.0"
 
 #define HTTP_EOL_STR                "\r\n"
 #define HTTP_EOL_LEN                2
@@ -31,5 +33,5 @@
 
 
 
-#endif /* __HTTP_PARSER__ */
+#endif /* __HTTP_H__ */
 

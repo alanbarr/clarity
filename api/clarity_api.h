@@ -10,7 +10,11 @@
 
 #define MAX_HEADERS                 10  /* Maximum stored headers */
 
-#define MAX_CONTENT_LENGTH_DIGITS   6 /* Max number of characters in sring + NULL */
+#define MAX_CONTENT_LENGTH_DIGITS   6   /* Max number of characters in sring + NULL */
+
+#define MAX_URL_LENGTH              50  /* URL lengths */
+
+#define MAX_POWER_ADDRESSES         3
 
 #define METHODS     \
     METHOD(GET)     \
@@ -97,6 +101,38 @@ typedef struct {
     resourceInformation resources[MAX_RESOURCES];
 } controlInformation;
 
+typedef union {
+    uint32_t ip;
+    char url[MAX_URL_LENGTH];
+} addressUrlIp;
+
+typedef enum {
+    ADDRESS_NONE,
+    ADDRESS_URL,
+    ADDRESS_IP
+} addressType;
+
+typedef struct {
+    addressType type;
+    addressUrlIp addr;
+} addressInformation;
+
+typedef enum {
+    TRANSPORT_NONE,
+    TRANSPORT_TCP,
+    TRANSPORT_UDP
+} transportType;
+
+typedef struct {
+    transportType type;
+    addressInformation addr;
+    uint16_t port;
+} transportInformation;
+
+typedef struct {
+    transportInformation tcp[MAX_POWER_ADDRESSES];
+} powerStateNotification;
+
 const char * httpParse(httpInformation * info,
                        const char * data, const uint16_t size);
 
@@ -105,6 +141,11 @@ const char * clarityProcess(controlInformation * control,
                             connectionInformation * conn,
                             const char * data, uint16_t size);
 
+int32_t clarityHttpResponseTextPlain(char * buf,
+                                     uint16_t bufSize,
+                                     uint8_t code,
+                                     const char * message,
+                                     const char * bodyString);
 
 #define PRINT_MESSAGES              false
 

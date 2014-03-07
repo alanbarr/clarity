@@ -6,7 +6,7 @@
 #include <limits.h>
 
 #include "clarity_api.h"
-#include "http_parser.h"
+#include "http.h"
 
 #ifdef METHOD
     #undef METHOD
