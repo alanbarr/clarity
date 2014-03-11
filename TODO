@@ -5,3 +5,5 @@
 
 * httpInformation needs renamed to httpReqInfo
 
+* get rid of clarity.c
+
