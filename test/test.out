@@ -1,0 +1,55 @@
+TEST (test.c:452) Checking index: 0.
+(getNextLine ../src/http_handler.c:283) Should be returning success.
+(parseHttpHeaders ../src/http_handler.c:447): IN parseHttpHeaders.
+(parseHttpHeaders ../src/http_handler.c:518): ALAN DEBUG. Going to try to grab next line.dataStart: 0x402951 size: 17 eol: 0x40295e dataEnd 0x402962
+FAILED (test.c:458): RTN was not NULL
+TEST (test.c:473) Checking header index: 0.
+FAILED (test.c:477): Header field data not as expected
+FAILED (test.c:480): Header field size not as expected
+FAILED (test.c:483): Header value data not as expected
+FAILED (test.c:486): Header value size not as expected
+TEST (test.c:473) Checking header index: 1.
+TEST (test.c:473) Checking header index: 2.
+TEST (test.c:473) Checking header index: 3.
+TEST (test.c:473) Checking header index: 4.
+TEST (test.c:473) Checking header index: 5.
+TEST (test.c:473) Checking header index: 6.
+TEST (test.c:473) Checking header index: 7.
+TEST (test.c:473) Checking header index: 8.
+TEST (test.c:473) Checking header index: 9.
+TEST (test.c:452) Checking index: 1.
+(getNextLine ../src/http_handler.c:283) Should be returning success.
+(parseHttpHeaders ../src/http_handler.c:447): IN parseHttpHeaders.
+(parseHttpHeaders ../src/http_handler.c:484) header field length was zero.
+(parseHttp ../src/http_handler.c:587) Parse Headers Failed.
+TEST (test.c:473) Checking header index: 0.
+TEST (test.c:473) Checking header index: 1.
+TEST (test.c:473) Checking header index: 2.
+TEST (test.c:473) Checking header index: 3.
+TEST (test.c:473) Checking header index: 4.
+TEST (test.c:473) Checking header index: 5.
+TEST (test.c:473) Checking header index: 6.
+TEST (test.c:473) Checking header index: 7.
+TEST (test.c:473) Checking header index: 8.
+TEST (test.c:473) Checking header index: 9.
+TEST (test.c:452) Checking index: 2.
+(getNextLine ../src/http_handler.c:283) Should be returning success.
+(parseHttpHeaders ../src/http_handler.c:447): IN parseHttpHeaders.
+(parseHttpHeaders ../src/http_handler.c:518): ALAN DEBUG. Going to try to grab next line.dataStart: 0x4029a1 size: 44 eol: 0x4029bb dataEnd 0x4029cd
+(getNextLine ../src/http_handler.c:283) Should be returning success.
+(parseHttpHeaders ../src/http_handler.c:484) header field length was zero.
+(parseHttp ../src/http_handler.c:587) Parse Headers Failed.
+TEST (test.c:473) Checking header index: 0.
+TEST (test.c:473) Checking header index: 1.
+TEST (test.c:473) Checking header index: 2.
+TEST (test.c:473) Checking header index: 3.
+TEST (test.c:473) Checking header index: 4.
+TEST (test.c:473) Checking header index: 5.
+TEST (test.c:473) Checking header index: 6.
+TEST (test.c:473) Checking header index: 7.
+TEST (test.c:473) Checking header index: 8.
+TEST (test.c:473) Checking header index: 9.
+--Test Information--
+Checks: 138
+Passes: 133
+Fails: 5

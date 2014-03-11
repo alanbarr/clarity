@@ -24,8 +24,6 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-
-
 #ifndef __CLARITY_API__
 #define __CLARITY_API__
 
@@ -39,11 +37,16 @@
 
 #define MAX_HEADERS                 10  /* Maximum stored headers */
 
-#define MAX_CONTENT_LENGTH_DIGITS   6   /* Max number of characters in sring + NULL */
+/* TODO should be here? */
+#define MAX_CONTENT_LENGTH_DIGITS   6   /* Max number of characters in string + NULL */
 
 #define MAX_URL_LENGTH              50  /* URL lengths */
 
 #define MAX_POWER_ADDRESSES         3
+
+#define MAX_AP_STR_LEN              16
+
+#define MAX_CONTENT_LENGTH_DIGITS   6   /* Max number of characters in string + NULL */
 
 #define METHODS     \
     METHOD(GET)     \
@@ -80,6 +83,23 @@ typedef enum {
 } methodMask;
 #endif
 
+#define CLARITY_ERRORS                              \
+    CLARITY_ERROR(CLARITY_SUCCESS)                  \
+    CLARITY_ERROR(CLARITY_ERROR)                    \
+    CLARITY_ERROR(CLARITY_ERROR_UNDEFINED)          \
+    CLARITY_ERROR(CLARITY_ERROR_RESPONSE)           \
+    CLARITY_ERROR(CLARITY_ERROR_CC3000_WLAN)        \
+    CLARITY_ERROR(CLARITY_ERROR_CC3000_SOCKET)      
+
+#ifdef CLARITY_ERROR
+#undef CLARITY_ERROR
+#endif
+#define CLARITY_ERROR(E) E,
+typedef enum {
+    CLARITY_ERRORS
+    CLARITY_MAX_ERROR
+} clarityError;
+
 typedef struct {
     const char * data; 
     uint16_t size;
@@ -102,7 +122,12 @@ typedef struct {
     header headers[MAX_HEADERS];
     buf content;
     buf body;
-} httpInformation;
+} httpInformation; /* rename */
+
+typedef struct {
+    httpVersion version;
+    uint16_t code;
+} httpResInformation;
 
 typedef struct {
     int32_t socket;
@@ -132,7 +157,7 @@ typedef struct {
 
 typedef union {
     uint32_t ip;
-    char url[MAX_URL_LENGTH];
+    char url[MAX_URL_LENGTH]; /* XXX needs NULL of strnlen*/
 } addressUrlIp;
 
 typedef enum {
@@ -158,47 +183,64 @@ typedef struct {
     uint16_t port;
 } transportInformation;
 
+#if 0
 typedef struct {
     transportInformation tcp[MAX_POWER_ADDRESSES];
 } powerStateNotification;
+#endif
 
-const char * httpParse(httpInformation * info,
-                       const char * data, const uint16_t size);
+typedef struct {
+    /* TODO smart config profies etc */
+#if 0
+    enum connMeth;
+#endif
+    char name[MAX_AP_STR_LEN];
+    uint8_t secType;
+    char password[MAX_AP_STR_LEN];
+} accessPointInformation;
 
-const char * clarityProcess(controlInformation * control, 
-                            httpInformation * info, 
-                            connectionInformation * conn,
-                            const char * data, uint16_t size);
 
-int32_t clarityHttpResponseTextPlain(char * buf,
+int32_t clarityInit(accessPointInformation * accessPointConnection);
+
+/* HTTP Reply*/
+int32_t claritySendInCb(const connectionInformation * conn,
+                             const void * data, uint16_t length);
+int32_t clarityHttpBuildResponseTextPlain(char * buf,
                                      uint16_t bufSize,
                                      uint8_t code,
                                      const char * message,
                                      const char * bodyString);
 
-uint32_t clarityHttpServerStart(Mutex * cc3000ApiMtx,
+/* HTTP Server */
+int32_t clarityHttpServerStart(Mutex * cc3000ApiMtx,
                                 controlInformation * control);
+int32_t clarityHttpServerKill(void);
 
-uint32_t clarityHttpServerKill(void);
-
+/* CC3000 API Mutex Protection */
 void clarityCC3000ApiLck(void);
 void clarityCC3000ApiUnlck(void);
 
+
 #define PRINT_MESSAGES              false
 
-#if defined(HTTP_PRINT_MESSAGES) && HTTP_PRINT_MESSAGES == true  
-    #define HTTP_PRINT(STR, ...) \
+#if defined(CLAR_PRINT_MESSAGES) && CLAR_PRINT_MESSAGES == true  
+
+    #define CLAR_PRINT_ERROR() \
+        printf("(%s:%d) ERROR.\r\n", __FILE__, __LINE__)
+
+    #define CLAR_PRINT(STR, ...) \
         printf(STR, __VA_ARGS__)
     
-    #define HTTP_PRINT_LINE(STR) \
-        printf("(%s %s:%d) " STR "\r\n", __FUNCTION__, __FILE__, __LINE__)
+    #define CLAR_PRINT_LINE(STR) \
+        printf("(%s:%d) " STR "\r\n", __FILE__, __LINE__)
     
-    #define HTTP_PRINT_LINE_ARGS(STR, ...) \
-        printf("(%s %s:%d): " STR "\r\n", __FUNCTION__, __FILE__, __LINE__, __VA_ARGS__)
+    #define CLAR_PRINT_LINE_ARGS(STR, ...) \
+        printf("(%s:%d): " STR "\r\n", __FILE__, __LINE__, __VA_ARGS__)
 #else
-    #define HTTP_PRINT(...) 
-    #define HTTP_PRINT_LINE(STR) 
-    #define HTTP_PRINT_LINE_ARGS(...) 
+    #define CLAR_PRINT_ERROR()
+    #define CLAR_PRINT(...) 
+    #define CLAR_PRINT_LINE(STR) 
+    #define CLAR_PRINT_LINE_ARGS(...) 
 #endif
 
 

@@ -135,7 +135,7 @@ static int test_startLinesValid(void)
         TEST_PRINT_ARG("loop iternation %d.", i);
         memset(&par, 0, sizeof(par));
 
-        rtn = httpParse(&par, startLinesValid[i], strlen(startLinesValid[i]));
+        rtn = httpParseRequest(&par, startLinesValid[i], strlen(startLinesValid[i]));
 
         ERROR_CHECK(rtn == NULL,"RTN was NULL");
      
@@ -182,7 +182,7 @@ static int test_startLinesInvalid(void)
     for (i=0;i<7;i++)
     {
         memset(&par, 0, sizeof(par));
-        rtn = httpParse(&par, startLinesInvalid[i], strlen(startLinesInvalid[i]));
+        rtn = httpParseRequest(&par, startLinesInvalid[i], strlen(startLinesInvalid[i]));
         ERROR_CHECK(rtn != NULL,"RTN was not NULL");
     }
     return 1;
@@ -290,7 +290,7 @@ static int test_headersValid(void)
         TEST_PRINT_ARG("Checking index: %d.", index);
 
         memset(&par,0,sizeof(par));
-        rtn = httpParse(&par, headersValid[index], strlen(headersValid[index]));
+        rtn = httpParseRequest(&par, headersValid[index], strlen(headersValid[index]));
         ERROR_CHECK(rtn == NULL,"RTN was NULL");  
         ERROR_CHECK(headerData[index].type != par.type,
                     "Type not correct.");
@@ -380,7 +380,7 @@ static int test_headersInvalid(void)
         TEST_PRINT_ARG("Checking index: %d.", index);
 
         memset(&par,0,sizeof(par));
-        rtn = httpParse(&par, headersInvalid[index], strlen(headersInvalid[index]));
+        rtn = httpParseRequest(&par, headersInvalid[index], strlen(headersInvalid[index]));
 
         ERROR_CHECK(rtn != NULL,"RTN was not NULL");
 
@@ -466,7 +466,7 @@ static int test_bodyValid(void)
         TEST_PRINT_ARG("Checking index: %d.", index);
 
         memset(&par,0,sizeof(par));
-        rtn = httpParse(&par, bodiesValid[index], strlen(bodiesValid[index]));
+        rtn = httpParseRequest(&par, bodiesValid[index], strlen(bodiesValid[index]));
         ERROR_CHECK(rtn == NULL,"RTN was NULL");
         ERROR_CHECK(par.body.data != bodyData[index].body.data,
                     "Body Data not as expected.");
@@ -530,7 +530,7 @@ static int test_bodyInvalid(void)
         TEST_PRINT_ARG("Checking index: %d.", index);
 
         memset(&par,0,sizeof(par));
-        rtn = httpParse(&par, bodiesInvalid[index], strlen(bodiesInvalid[index]));
+        rtn = httpParseRequest(&par, bodiesInvalid[index], strlen(bodiesInvalid[index]));
         ERROR_CHECK(rtn != NULL,"RTN was not NULL");
         ERROR_CHECK(par.body.data != bodyData[index].body.data,
                     "Body Data not as expected.");
@@ -629,7 +629,7 @@ static void test_examples(void)
         TEST_PRINT_ARG("Checking index: %d.", index);
 
         memset(&par,0,sizeof(par));
-        rtn = httpParse(&par, test_examples[index], strlen(test_examples[index]));
+        rtn = httpParseRequest(&par, test_examples[index], strlen(test_examples[index]));
         ERROR_CHECK(rtn == NULL,"RTN was NULL");  
 
         ERROR_CHECK(rtn != rtns[index], "rtn was not last byte.");

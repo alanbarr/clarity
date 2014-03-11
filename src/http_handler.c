@@ -24,19 +24,21 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-
-#include "clarity_api.h"
 #include <strings.h>
-
+#include "clarity_int.h"
+#include "clarity_api.h"
+#include "socket.h"
 
 /* TODO use to cut short processing */
-bool httpHandlerCheckResouceMethod(httpInformation * info)
+#if 0
+int32_t httpHandlerCheckResouceMethod(httpInformation * info)
 {
     (void)info;
     return true;
 }
+#endif
 
-static bool getMethod(resourceInformation * resInfo, methodType method, 
+static int32_t getMethod(resourceInformation * resInfo, methodType method, 
                       methodInformation ** methodInfo)
 {
     uint8_t methIndex;
@@ -53,7 +55,7 @@ static bool getMethod(resourceInformation * resInfo, methodType method,
     return false;
 }
 
-static bool getResource(controlInformation * con, buf * resBuf,
+static int32_t getResource(controlInformation * con, buf * resBuf,
                         resourceInformation ** resInfo)
 {
     uint8_t resIndex;
@@ -70,8 +72,8 @@ static bool getResource(controlInformation * con, buf * resBuf,
 }
 
 
-static bool httpHandle(httpInformation * info,
-                       controlInformation * control, void * user)
+int32_t httpHandle(httpInformation * info,
+                controlInformation * control, void * user)
 {
     resourceInformation * resInfo;
     methodInformation * methInfo;
@@ -100,14 +102,14 @@ static bool httpHandle(httpInformation * info,
 }
 
 
-const char * clarityProcess(controlInformation * control,
-                            httpInformation * http,
-                            connectionInformation * connection,
-                            const char * data, uint16_t size)
+const char * httpRequestProcess(controlInformation * control,
+                                httpInformation * http,
+                                connectionInformation * connection,
+                                const char * data, uint16_t size)
 {
     const char * rtnd = NULL;
     
-    if (NULL == (rtnd = httpParse(http, data, size)))
+    if (NULL == (rtnd = httpParseRequest(http, data, size)))
     {
         return NULL;
     }
@@ -124,5 +126,6 @@ const char * clarityProcess(controlInformation * control,
 
     return NULL;
 }
+
 
 

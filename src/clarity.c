@@ -25,15 +25,18 @@
 *******************************************************************************/
 
 #include <stdio.h>
-#include "http.h"
 #include <stdint.h>
+#include <string.h>
+#include "clarity_api.h"
+#include "http.h"
+#include "socket.h"
 
 
-int32_t clarityHttpResponseTextPlain(char * buf,
-                                     uint16_t bufSize,
-                                     uint8_t code,
-                                     const char * message,
-                                     const char * bodyString)
+int32_t clarityHttpBuildResponseTextPlain(char * buf,
+                                          uint16_t bufSize,
+                                          uint8_t code,
+                                          const char * message,
+                                          const char * bodyString)
 {
     
 #define HTTP_RESPONSE_LEFT      (bufSize - bufIndex)
@@ -69,3 +72,25 @@ int32_t clarityHttpResponseTextPlain(char * buf,
 
     return bufIndex;
 }
+
+int32_t claritySendInCb(const connectionInformation * conn,
+                        const void * data, uint16_t length)
+{
+    int32_t rtn;
+
+    clarityCC3000ApiLck();
+    rtn = send(conn->socket, data, length, 0);
+    clarityCC3000ApiUnlck();
+
+    return rtn;
+}
+
+
+int32_t clarityInit(accessPointInformation * accessPointConnection)
+{
+    clarityMgmtInit(accessPointConnection);
+    return 0;
+}
+
+
+

@@ -24,12 +24,15 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#include "socket.h"
+#if 1
 #include "clarity_api.h"
-#include "cc3000_chibios_api.h"
-#include "string.h"
-#include "fyp.h"
+#endif
 #include <stdio.h>
+#include "clarity_int.h"
+#include <string.h>
+#include "ch.h"
+#include "cc3000_chibios_api.h"
+#include "socket.h"
 
 static WORKING_AREA(httpWorkingArea, 1024);
 
@@ -45,17 +48,17 @@ static Mutex * cc3000Mtx;
 
 void clarityCC3000ApiLck(void)
 { 
-    if (cc3000Mtx != NULL)      \
-    {                           \
-        chMtxLock(cc3000Mtx);   \
+    if (cc3000Mtx != NULL)
+    {
+        chMtxLock(cc3000Mtx);
     }
 }
 
 void clarityCC3000ApiUnlck(void)
 {
-    if (cc3000Mtx != NULL)      \
-    {                           \
-        chMtxUnlock();          \
+    if (cc3000Mtx != NULL)
+    {
+        chMtxUnlock();
     }
 }
 
@@ -73,7 +76,7 @@ static msg_t cc3000HttpServer(void * arg)
 
     while (1)
     {
-        PRINT("Server: top of while 1", NULL);
+        CLAR_PRINT("Server: top of while 1", NULL);
 
         if (killHttpServer == true)
         {
@@ -92,7 +95,7 @@ static msg_t cc3000HttpServer(void * arg)
             {
                 if (accepted.socket == -1)
                 {
-                    PRINT("accept() returned error: %d", accepted.socket);
+                    CLAR_PRINT("accept() returned error: %d", accepted.socket);
                 }
                 else
                 {
@@ -108,25 +111,25 @@ static msg_t cc3000HttpServer(void * arg)
         
         if ((rxBytes = recv(accepted.socket, rxBuf, sizeof(rxBuf), 0)) == -1)
         {
-            PRINT("recv() returned error.", NULL);
+            CLAR_PRINT("recv() returned error.", NULL);
         }
         
         clarityCC3000ApiUnlck();
 
         if (rxBytes > 0)
         {
-            if ((httpRtn = clarityProcess(controlInfo,
+            if ((httpRtn = httpRequestProcess(controlInfo,
                                           &httpInfo, 
                                           &accepted,
                                           rxBuf, rxBytes)) == NULL)
             {
-                PRINT("clarityProcess() returned NULL.", NULL);
+                CLAR_PRINT("httpRequestProcess() returned NULL.", NULL);
             }
         }
  
         if (closesocket(accepted.socket) == -1)
         {
-            PRINT("closesocket() failed for acceptedSocket.", NULL);
+            CLAR_PRINT("closesocket() failed for acceptedSocket.", NULL);
         }
 
         chThdSleep(MS2ST(500));
@@ -135,21 +138,21 @@ static msg_t cc3000HttpServer(void * arg)
     clarityCC3000ApiLck();
     if (closesocket(serverSocket) == -1)
     {
-        PRINT("closesocket() failed for serverSocket.", NULL);
+        CLAR_PRINT("closesocket() failed for serverSocket.", NULL);
     }
     clarityCC3000ApiUnlck();
 
     return 0;
 }
 
-uint32_t clarityHttpServerKill(void)
+int32_t clarityHttpServerKill(void)
 {
     killHttpServer = true;
     /* TODO ensure server ends */
     return 0;
 }
 
-uint32_t clarityHttpServerStart(Mutex * cc3000ApiMtx, controlInformation * control)
+int32_t clarityHttpServerStart(Mutex * cc3000ApiMtx, controlInformation * control)
 {
     uint16_t blockOpt = SOCK_ON;
     sockaddr_in serverAddr = {0};
@@ -163,7 +166,7 @@ uint32_t clarityHttpServerStart(Mutex * cc3000ApiMtx, controlInformation * contr
     /* We need dhcp info here */
     if (cc3000AsyncData.dhcp.present != 1)
     {
-        PRINT("No DHCP info present", NULL);
+        CLAR_PRINT("No DHCP info present", NULL);
         return 1;
     }
 
@@ -172,7 +175,7 @@ uint32_t clarityHttpServerStart(Mutex * cc3000ApiMtx, controlInformation * contr
 #if 0
     serverAddr.sin_addr.s_addr = *(int *)cc3000AsyncData.dhcp.info.aucIP; 
 #endif
-    PRINT("ALAN DEBUG DHCP ADDR IS %x", serverAddr.sin_addr.s_addr);
+    CLAR_PRINT("ALAN DEBUG DHCP ADDR IS %x", serverAddr.sin_addr.s_addr);
 
 
     clarityCC3000ApiLck();
@@ -180,13 +183,13 @@ uint32_t clarityHttpServerStart(Mutex * cc3000ApiMtx, controlInformation * contr
     if ((serverSocket = socket(AF_INET, SOCK_STREAM,
                                IPPROTO_TCP)) == -1)
     {
-        PRINT("socket() returned error.", NULL);
+        CLAR_PRINT("socket() returned error.", NULL);
         while(1);
     }
     else if (setsockopt(serverSocket, SOL_SOCKET, SOCKOPT_ACCEPT_NONBLOCK,
                         &blockOpt, sizeof(blockOpt)) == -1)
     {
-        PRINT("setsockopt() returned error.", NULL);
+        CLAR_PRINT("setsockopt() returned error.", NULL);
         while(1);
     }
 
@@ -194,14 +197,14 @@ uint32_t clarityHttpServerStart(Mutex * cc3000ApiMtx, controlInformation * contr
                   sizeof(serverAddr)) == -1)
     {
         serverSocket = -1;
-        PRINT("bind() returned error.", NULL);
+        CLAR_PRINT("bind() returned error.", NULL);
         while(1);
     }
 
     else if (listen(serverSocket, 1) != 0)
     {
         serverSocket = -1;
-        PRINT("bind() returned error.", NULL);
+        CLAR_PRINT("bind() returned error.", NULL);
         while(1);
     }
      

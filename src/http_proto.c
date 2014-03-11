@@ -30,7 +30,6 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <limits.h>
-
 #include "clarity_api.h"
 #include "http.h"
 
@@ -73,163 +72,138 @@ static const char * getNextLine(const char * data, uint16_t size)
 
     if (dataRtnd == NULL)
     {
-        HTTP_PRINT_LINE("getEndOfLine failed.");
+        CLAR_PRINT_LINE("getEndOfLine failed.");
         return NULL;
     }
 
     if ((dataRtnd + HTTP_EOL_LEN) > (data + size - 1))
     {
-        HTTP_PRINT_LINE("Not enough room for EOL.");
+        CLAR_PRINT_LINE("Not enough room for EOL.");
         return NULL;
     }
     
-    HTTP_PRINT_LINE("Should be returning success.");
+    CLAR_PRINT_LINE("Should be returning success.");
     return (dataRtnd += HTTP_EOL_LEN);
 }
 
 
-static const char * parseStartLine(const char * data,
-                                   uint16_t size,
-                                   httpInformation * info)
+/* Return pointer to last char of version */
+static const char * getHttpVersion(const char * version,
+                                   const char * eol,
+                                   uint8_t * major,
+                                   uint8_t * minor)
+{
+    const char * c = version;
+
+    if (eol - version < HTTP_VERSION_LEN)
+    {
+        return NULL;
+    }
+ 
+    if (strncasecmp(version, "HTTP/", 5) != 0)  /* TODO */
+    {
+        CLAR_PRINT_LINE("HTTP/ not present.");
+        return NULL;
+    }
+
+    c += 5;                       /* Skip HTTP/ */
+ 
+    /* First Digit */
+    if (isdigit((int)*c) == 0)
+    {
+        CLAR_PRINT_LINE("Version Major was not a digit.");
+        return NULL;
+    }
+    else
+    {
+        (*major= *c - 48);
+    }
+
+    /* Check for dp */
+    c++;                /* You'll find no OOP here */
+    if (*c != '.')
+    {
+        CLAR_PRINT_LINE("Version DP not as expected.");
+        return NULL;
+    }
+
+    /* Second Digit */
+    c++;
+    if (isdigit((int)*c) == 0)
+    {
+        CLAR_PRINT_LINE("Version Minor not a digit.");
+        return NULL;
+    }
+    else
+    {
+        (*minor = *c - ASCII_DIGIT_OFFSET);
+    }
+
+    return c;
+}
+
+
+static const char * parseResponseStartLine(const char * data,
+                                          uint16_t size,
+                                          httpResInformation * info)
 {
     const char * c = data;
-    const char * resource = NULL;
-    const char * version = NULL;
-    methodType type = 0;
     const char * eol = getEndOfLine(data, size);
+    int32_t tempCode;
+    char temp[HTTP_STATUS_CODE_DIGITS + 1];
+    char * end = NULL;
 
     if (eol == NULL)
     {
-        HTTP_PRINT_LINE("Could not find eol.");
+        CLAR_PRINT_LINE("Could not find eol.");
         return NULL;
     }
 
-    if ((eol-c) < HTTP_START_LINE_MIN_LEN)
+    if ((eol-c) < HTTP_RES_START_LINE_MIN_LEN)
     {
-        HTTP_PRINT_LINE_ARGS("eol: %p c: %p line length: %d", eol,c,(int)(eol-c));
-        HTTP_PRINT_LINE("FAIL");
+        CLAR_PRINT_LINE_ARGS("eol: %p c: %p line length: %d", eol,c,(int)(eol-c));
+        CLAR_PRINT_LINE("FAIL");
         return NULL;
     }
     
-    for (type = 0; type < METHOD_TYPE_MAX; type++)
+    if ((c = getHttpVersion(c, eol, &(info->version.major),
+                            &(info->version.minor))) == NULL)
     {
-        if (*c == *methodStrings[type])
-        {
-            if (type == POST || type == PUT)
-            {
-                if (*(c+1) == 'O' ||
-                    *(c+1) == 'o')
-                {
-                    type = POST;
-                }
-                else
-                {
-                    type = PUT;
-                }
-            }
-            break;
-        }
-    }
-
-    if (type == METHOD_TYPE_MAX)
-    {
-        HTTP_PRINT_LINE("FAIL");
         return NULL;
     }
 
-    else if (strncasecmp(c, methodStrings[type],
-                         SMALLER(strlen(methodStrings[type]), (eol-c)) != 0))
-    {
-        HTTP_PRINT_LINE("FAIL");
-        return NULL;
-    }
-
-    info->type = type;
-
-    c += strlen(methodStrings[type]);
-    
+    c++;
     if (*c != ' ')
     {
-        HTTP_PRINT_LINE("Space not found after type.");
+        return NULL;
+    }
+    c++; /* Now should be on code */
+    
+    memcpy(temp, c, HTTP_STATUS_CODE_DIGITS);
+    temp[HTTP_STATUS_CODE_DIGITS] = 0;
+    
+    errno = 0;
+    tempCode = strtol(temp, &end, 10);
+
+    if (end != NULL && *end != 0)
+    {
+        return NULL;
+    }
+    if (tempCode == LONG_MAX || tempCode == LONG_MIN || tempCode == 0)
+    {
+        if (errno == EINVAL || errno == ERANGE)
+        {
+            return NULL;
+        }
+    }
+    if (tempCode > UINT16_MAX)
+    {
         return NULL;
     }
     
-    /* c is currently on space before resource. Move to start of resource */
-    c++;
+    info->code = tempCode;
 
-    if (*c == HTTP_RESOURCE_START_CHAR)
-    {   
-        resource = c;
-    }
-    else 
-    {
-        HTTP_PRINT_LINE("Resource string did not start as expected.");
-        return NULL;
-    }
-
-    /* Move over resource to version */
-    while((c+1) < eol)
-    {
-        if (*c == ' ')
-        {
-            version = c = (c+1); /* H of HTTP*/
-            break;
-        }
-        c++;
-    }
-    
-    if (version == NULL)
-    {
-        HTTP_PRINT_LINE("Version was NULL.");
-        return NULL;
-    }
-    
-    /* Not sure if there can be space after the version. */
-    if (eol - version >= HTTP_VERSION_LEN)
-    {
-        if (strncasecmp(version, "HTTP/", 5) != 0)  /* TODO */
-        {
-            HTTP_PRINT_LINE("HTTP/ not present.");
-            return NULL;
-        }
-
-        c += 5;                       /* Skip HTTP/ */
-
-        /* First Digit */
-        if (isdigit((int)*c) == 0)
-        {
-            HTTP_PRINT_LINE("Version Major was not a digit.");
-            return NULL;
-        }
-        else
-        {
-            (info->version.major = *c - 48);
-        }
-
-        /* Check for dp */
-        c++;                /* You'll find no OOP here */
-        if (*c != '.')
-        {
-            HTTP_PRINT_LINE("Version DP not as expected.");
-            return NULL;
-        }
-
-        /* Second Digit */
-        c++;
-        if (isdigit((int)*c) == 0)
-        {
-            HTTP_PRINT_LINE("Version Minor not a digit.");
-            return NULL;
-        }
-        else
-        {
-            (info->version.minor = *c - ASCII_DIGIT_OFFSET);
-        }
-    }
-
-    /* Update Resource */
-    info->resource.data = resource;
-    info->resource.size = version - resource - HTTP_SPACE_LEN;
+    /* TODO String */
 
     /* Success */
     return eol; /* todo range */
@@ -250,17 +224,17 @@ static const char * parseHeaders(const char * data,
     const char * eol = getEndOfLine(data,size);
     uint8_t headersIndex = 0;
 
-    HTTP_PRINT_LINE_ARGS("IN %s.", __FUNCTION__);
+    CLAR_PRINT_LINE_ARGS("IN %s.", __FUNCTION__);
     if (eol == NULL)
     {
-        HTTP_PRINT_LINE("Couldn't find EOL");
+        CLAR_PRINT_LINE("Couldn't find EOL");
         return NULL;
     }
 
 #if 0
     if (P_DIFF_LEN(eol, data) < HTTP_EOL_LEN)
     {
-        HTTP_PRINT_LINE("Data length too short to hold EOL characters.");
+        CLAR_PRINT_LINE("Data length too short to hold EOL characters.");
         return NULL;
     }
 #endif
@@ -298,7 +272,7 @@ static const char * parseHeaders(const char * data,
 
         if (header.field.size == 0)
         {
-            HTTP_PRINT_LINE("header field length was zero.");
+            CLAR_PRINT_LINE("header field length was zero.");
             return NULL;
         }
         
@@ -306,14 +280,14 @@ static const char * parseHeaders(const char * data,
         /* expecting at least two more chars - space and value */
         if (data+2 >= eol)
         {
-            HTTP_PRINT_LINE("Not enough data to eol.");
+            CLAR_PRINT_LINE("Not enough data to eol.");
             return NULL;
         }
 
         data++; /* Move data to space */
         if (*data != ' ')
         {
-            HTTP_PRINT_LINE("Space not present.");
+            CLAR_PRINT_LINE("Space not present.");
             return NULL;
         }
         data++;
@@ -321,7 +295,7 @@ static const char * parseHeaders(const char * data,
         /* data is on the header value */
         if (eol==data)
         {
-            HTTP_PRINT_LINE("data and eol are the same.");
+            CLAR_PRINT_LINE("data and eol are the same.");
             return NULL;
         }
      
@@ -384,7 +358,7 @@ static const char * parseHeaders(const char * data,
             headersIndex++;
         }
 
-        HTTP_PRINT_LINE_ARGS("ALAN DEBUG. Going to try to grab next line."
+        CLAR_PRINT_LINE_ARGS("ALAN DEBUG. Going to try to grab next line."
                         "dataStart: %p size: %d eol: %p dataEnd %p", dataStart,
                         size, eol, dataStart + size);
 
@@ -453,22 +427,133 @@ static const char * parseBody(const char * data,
 
     return body + info->body.size;
 }
+ 
+static const char * parseRequestStartLine(const char * data,
+                                          uint16_t size,
+                                          httpInformation * info)
+{
+    const char * c = data;
+    const char * resource = NULL;
+    const char * version = NULL;
+    methodType type = 0;
+    const char * eol = getEndOfLine(data, size);
 
-static const char * httpParseRequest(httpInformation * info, const char * data,
+    if (eol == NULL)
+    {
+        CLAR_PRINT_LINE("Could not find eol.");
+        return NULL;
+    }
+
+    if ((eol-c) < HTTP_REQ_START_LINE_MIN_LEN)
+    {
+        CLAR_PRINT_LINE_ARGS("eol: %p c: %p line length: %d", eol,c,(int)(eol-c));
+        CLAR_PRINT_LINE("FAIL");
+        return NULL;
+    }
+    
+    for (type = 0; type < METHOD_TYPE_MAX; type++)
+    {
+        if (*c == *methodStrings[type])
+        {
+            if (type == POST || type == PUT)
+            {
+                if (*(c+1) == 'O' ||
+                    *(c+1) == 'o')
+                {
+                    type = POST;
+                }
+                else
+                {
+                    type = PUT;
+                }
+            }
+            break;
+        }
+    }
+
+    if (type == METHOD_TYPE_MAX)
+    {
+        CLAR_PRINT_LINE("FAIL");
+        return NULL;
+    }
+
+    else if (strncasecmp(c, methodStrings[type],
+                         SMALLER(strlen(methodStrings[type]), (eol-c)) != 0))
+    {
+        CLAR_PRINT_LINE("FAIL");
+        return NULL;
+    }
+
+    info->type = type;
+
+    c += strlen(methodStrings[type]);
+    
+    if (*c != ' ')
+    {
+        CLAR_PRINT_LINE("Space not found after type.");
+        return NULL;
+    }
+    
+    /* c is currently on space before resource. Move to start of resource */
+    c++;
+
+    if (*c == HTTP_RESOURCE_START_CHAR)
+    {   
+        resource = c;
+    }
+    else 
+    {
+        CLAR_PRINT_LINE("Resource string did not start as expected.");
+        return NULL;
+    }
+
+    /* Move over resource to version */
+    while((c+1) < eol)
+    {
+        if (*c == ' ')
+        {
+            version = c = (c+1); /* H of HTTP*/
+            break;
+        }
+        c++;
+    }
+    
+    if (version == NULL)
+    {
+        CLAR_PRINT_LINE("Version was NULL.");
+        return NULL;
+    }
+    
+    if ((c = getHttpVersion(version, eol, &(info->version.major),
+                            &(info->version.minor))) == NULL)
+    {
+        return NULL;
+    }
+    /* Update Resource */
+    info->resource.data = resource;
+    info->resource.size = version - resource - HTTP_SPACE_LEN;
+
+    /* Success */
+    return eol; /* todo range */
+}
+
+const char * httpParseRequest(httpInformation * info, const char * data,
                                      uint16_t size)
 {
     const char * dataRtnd = NULL;
+    
+    memset(info, 0, sizeof(*info));
 
-    if ((dataRtnd = parseStartLine(data, size, info)) == NULL)
+    if ((dataRtnd = parseRequestStartLine(data, size, info)) == NULL)
     {
-        HTTP_PRINT_LINE("Parse Start Line Failed.");
+        CLAR_PRINT_LINE("parseRequestStartLine() Failed.");
         return NULL;
     }
     
     else if ((dataRtnd = getNextLine(dataRtnd, P_OFFSET_LEN(data, size, 
                                                           dataRtnd))) == NULL)
     {
-        HTTP_PRINT_LINE("getNextLine failed.");
+        CLAR_PRINT_LINE("getNextLine() failed.");
         return NULL;
     }
 
@@ -476,7 +561,7 @@ static const char * httpParseRequest(httpInformation * info, const char * data,
                                           P_OFFSET_LEN(data, size, dataRtnd),
                                           info)) == NULL)
     {
-        HTTP_PRINT_LINE("Parse Headers Failed.");
+        CLAR_PRINT_LINE("parseHeaders() Failed.");
         return NULL;
     }
      
@@ -486,7 +571,7 @@ static const char * httpParseRequest(httpInformation * info, const char * data,
         if ((dataRtnd = parseBody(dataRtnd, P_OFFSET_LEN(data, size, dataRtnd),
                                            info)) == NULL)
         {
-            HTTP_PRINT_LINE("Parse Data Failed.");
+            CLAR_PRINT_LINE("Parse Data Failed.");
             return NULL;
         }
         else
@@ -501,53 +586,81 @@ static const char * httpParseRequest(httpInformation * info, const char * data,
     }
 }
 
-static const char * httpParseResponse(httpInformation * info, const char * data,
-                                      uint16_t size)
+const char * httpParseResponse(httpResInformation * info, const char * data,
+                               uint16_t size)
 {
-    (void)info;
-    (void)data;
-    (void)size;
+    const char * dataRtnd = NULL;
+    if ((dataRtnd = parseResponseStartLine(data, size, info)) == NULL)
+    {
+        CLAR_PRINT_LINE("parseResponseStartLine() failed.");
+        return NULL;
+    }
     return NULL;
 }
 
 
-const char * httpParse(httpInformation * info, const char * data, uint16_t size)
+
+/* builds a http 1.0 request */
+uint16_t httpBuildRequestTextPlain(const httpInformation * http,
+                                  char * txBuf,
+                                  uint16_t txBufSize)
 {
-    unsigned char first = 0;
-    unsigned char second = 0;
- 
-    memset(info, 0, sizeof(*info));
+#define HTTP_REQ_LEFT      (txBufSize - bufIndex)
+#define HTTP_REQ_CURRENT   (txBuf + bufIndex)
+    int16_t bufIndex = 0;
+    int8_t headerIndex = 0;
 
-    if (size<2)
-    {
-        return NULL;
-    }
-    
-    first = toupper((int)*data);
+    /* First Line */
+    bufIndex += snprintf(HTTP_REQ_CURRENT, HTTP_REQ_LEFT, "%s ",
+                         methodStrings[http->type]);
+    bufIndex += snprintf(HTTP_REQ_CURRENT, 
+                         SMALLER(HTTP_REQ_LEFT, http->resource.size),
+                         "%s ", http->resource.data);
+    bufIndex += snprintf(HTTP_REQ_CURRENT, HTTP_REQ_LEFT, 
+                         "%s", HTTP_VERSION_STR /* TODO ignoring whats in the struct? */);
+    bufIndex += snprintf(HTTP_REQ_CURRENT, HTTP_REQ_LEFT,"%s", HTTP_EOL_STR);
 
-    switch (first)
+    /* Headers */
+    while (headerIndex < MAX_HEADERS)
     {
-        case 'G':
-        case 'P':
-        case 'T':
-        case 'O':
-        case 'D':
-            return httpParseRequest(info,data,size);
-        case 'H':
-            second = toupper((int)*(data+1));
-            if (second == 'E')
-            {
-                return httpParseRequest(info,data,size);
-            }
-            else
-            {
-                return httpParseResponse(info,data,size);
-            }
-        default:
-            return NULL;
-    }
+        const header * header = &http->headers[headerIndex];
+        
+        if (header->field.size == 0)
+        {
+            break;
+        }
     
-    return NULL; /* TODO */
+        bufIndex += snprintf(HTTP_REQ_CURRENT,
+                             SMALLER(HTTP_REQ_LEFT, header->field.size),
+                             "%s: ", 
+                             header->field.data);
+        bufIndex += snprintf(HTTP_REQ_CURRENT,
+                             SMALLER(HTTP_REQ_LEFT, header->value.size),
+                             "%s", 
+                             header->value.data);
+        bufIndex += snprintf(HTTP_REQ_CURRENT, HTTP_REQ_LEFT,"%s", HTTP_EOL_STR);
+        headerIndex++;
+    }
+    if (http->body.size != 0)
+    {
+        bufIndex += snprintf(HTTP_REQ_CURRENT, HTTP_REQ_LEFT,
+                             "%s", HTTP_CONTENT_TYPE_STR);
+        bufIndex += snprintf(HTTP_REQ_CURRENT, HTTP_REQ_LEFT,
+                             "%d", http->body.size);
+        bufIndex += snprintf(HTTP_REQ_CURRENT, HTTP_REQ_LEFT,"%s", HTTP_EOL_STR);
+    }
+
+    bufIndex += snprintf(HTTP_REQ_CURRENT, HTTP_REQ_LEFT,"%s", HTTP_EOL_STR);
+    bufIndex += snprintf(HTTP_REQ_CURRENT, HTTP_REQ_LEFT, "%s", http->body.data);
+
+    /* TODO error checking */
+    
+    if (bufIndex == txBufSize)
+    {
+        return 0; /* Assume error */
+    }
+    return txBufSize;
+#undef HTTP_REQ_LEFT
+#undef HTTP_REQ_CURRENT
+
 }
-
-
