@@ -7,3 +7,8 @@
 
 * get rid of clarity.c
 
+* mgmt - at init permit ptr to callback function for watchdog? If not NULL create a new thread which will
+  attempt tp grab mutex every 100 ms or so? If we cant get it say over a period of 60 seconds assume borked?
+  It would help to define all timeouts in the same place (e.g. a timeout in ms for server accepts). May still
+  run into issues with users holding the mutex soooo have a mutex lock call counter? if it increments
+  then we know we are simply coming in at a bad time.
