@@ -56,7 +56,7 @@ static int32_t getMethod(clarityResourceInformation * resInfo,
     return false;
 }
 
-static int32_t getResource(clarityControlInformation * con, clarityBuf * resBuf,
+static int32_t getResource(clarityHttpServerInformation * con, clarityBuf * resBuf,
                            clarityResourceInformation ** resInfo)
 {
     uint8_t resIndex;
@@ -74,7 +74,7 @@ static int32_t getResource(clarityControlInformation * con, clarityBuf * resBuf,
 
 
 int32_t httpHandle(clarityHttpInformation * info,
-                   clarityControlInformation * control, void * user)
+                   clarityHttpServerInformation * control, void * user)
 {
     clarityResourceInformation * resInfo;
     clarityHttpMethodInformation * methInfo;
@@ -103,7 +103,7 @@ int32_t httpHandle(clarityHttpInformation * info,
 }
 
 
-const char * httpRequestProcess(clarityControlInformation * control,
+const char * httpRequestProcess(clarityHttpServerInformation * control,
                                 clarityHttpInformation * http,
                                 clarityConnectionInformation * connection,
                                 const char * data, uint16_t size)

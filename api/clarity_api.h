@@ -113,7 +113,7 @@ typedef struct {
 typedef struct {
     clarityHttpVersion version;
     uint16_t code;
-} clarityHttpResInformation; /*TODO  Response */
+} clarityHttpResponseInformation;
 
 typedef struct {
     int32_t socket;
@@ -134,11 +134,8 @@ typedef struct {
 } clarityResourceInformation;
 
 typedef struct { 
-# if 0
-    const char * deviceName;
-#endif
     clarityResourceInformation resources[CLARITY_MAX_RESOURCES];
-} clarityControlInformation; /*TODO Http Server */
+} clarityHttpServerInformation; /*TODO Http Server */
 
 typedef union {
     uint32_t ip;
@@ -198,7 +195,7 @@ int32_t clarityHttpBuildResponseTextPlain(char * clarityBuf,
 
 /* HTTP Server */
 clarityError clarityHttpServerStart(Mutex * cc3000ApiMtx,
-                                    clarityControlInformation * control);
+                                    clarityHttpServerInformation * control);
 clarityError clarityHttpServerKill(void);
 
 /* CC3000 API Mutex Protection */

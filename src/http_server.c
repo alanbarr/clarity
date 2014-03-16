@@ -38,7 +38,7 @@ static Thread * httpServerThd = NULL;
 static bool killHttpServer = false;
 static char rxBuf[1000];
 
-static clarityControlInformation * controlInfo;
+static clarityHttpServerInformation * controlInfo;
 static clarityHttpInformation httpInfo;
 static int serverSocket;
 
@@ -156,7 +156,7 @@ clarityError clarityHttpServerKill(void)
 }
 
 clarityError clarityHttpServerStart(Mutex * cc3000ApiMtx,
-                                    clarityControlInformation * control)
+                                    clarityHttpServerInformation * control)
 {
     uint16_t blockOpt = SOCK_ON;
     clarityError rtn = CLARITY_ERROR_UNDEFINED;

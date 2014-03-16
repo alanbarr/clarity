@@ -145,7 +145,7 @@ static const char * getHttpVersion(const char * version,
 
 static const char * parseResponseStartLine(const char * data,
                                           uint16_t size,
-                                          clarityHttpResInformation * info)
+                                          clarityHttpResponseInformation * info)
 {
     const char * c = data;
     const char * eol = getEndOfLine(data, size);
@@ -586,7 +586,8 @@ const char * httpParseRequest(clarityHttpInformation * info, const char * data,
     }
 }
 
-const char * httpParseResponse(clarityHttpResInformation * info, const char * data,
+const char * httpParseResponse(clarityHttpResponseInformation * info,
+                               const char * data,
                                uint16_t size)
 {
     const char * dataRtnd = NULL;
