@@ -31,7 +31,7 @@
 
 /* TODO use to cut short processing */
 #if 0
-int32_t httpHandlerCheckResouceMethod(clarityHttpInformation * info)
+int32_t httpHandlerCheckResouceMethod(clarityHttpRequestInformation * info)
 {
     (void)info;
     return true;
@@ -73,7 +73,7 @@ static int32_t getResource(clarityHttpServerInformation * con, clarityBuf * resB
 }
 
 
-int32_t httpHandle(clarityHttpInformation * info,
+int32_t httpHandle(clarityHttpRequestInformation * info,
                    clarityHttpServerInformation * control, void * user)
 {
     clarityResourceInformation * resInfo;
@@ -104,7 +104,7 @@ int32_t httpHandle(clarityHttpInformation * info,
 
 
 const char * httpRequestProcess(clarityHttpServerInformation * control,
-                                clarityHttpInformation * http,
+                                clarityHttpRequestInformation * http,
                                 clarityConnectionInformation * connection,
                                 const char * data, uint16_t size)
 {

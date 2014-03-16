@@ -39,7 +39,7 @@ static bool killHttpServer = false;
 static char rxBuf[1000];
 
 static clarityHttpServerInformation * controlInfo;
-static clarityHttpInformation httpInfo;
+static clarityHttpRequestInformation httpInfo;
 static int serverSocket;
 
 static Mutex * cc3000Mtx;

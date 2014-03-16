@@ -1,10 +1,6 @@
 * cc3000 recv() doesn't seem to do any internal checking on buffer size. Care needs
   to be taken whenever calling this function, and presumably send().
 
-* consider prefixing all globals with clarity or cl...
-
-* httpInformation needs renamed to httpReqInfo
-
 * get rid of clarity.c
 
 * mgmt - at init permit ptr to callback function for watchdog? If not NULL create a new thread which will

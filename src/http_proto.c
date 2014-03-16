@@ -216,7 +216,7 @@ static const char * parseResponseStartLine(const char * data,
  *         in the blank seperator line. */
 static const char * parseHeaders(const char * data,
                                  uint16_t size,
-                                 clarityHttpInformation * info)
+                                 clarityHttpRequestInformation * info)
 {
     const char * const dataStart = data;
     clarityHttpHeader header;
@@ -396,7 +396,7 @@ static const char * parseHeaders(const char * data,
  *         in the body */
 static const char * parseBody(const char * data,
                                   uint16_t size,
-                                  clarityHttpInformation * info)
+                                  clarityHttpRequestInformation * info)
 {
     const char * body = NULL;
 
@@ -430,7 +430,7 @@ static const char * parseBody(const char * data,
  
 static const char * parseRequestStartLine(const char * data,
                                           uint16_t size,
-                                          clarityHttpInformation * info)
+                                          clarityHttpRequestInformation * info)
 {
     const char * c = data;
     const char * resource = NULL;
@@ -537,7 +537,7 @@ static const char * parseRequestStartLine(const char * data,
     return eol; /* todo range */
 }
 
-const char * httpParseRequest(clarityHttpInformation * info, const char * data,
+const char * httpParseRequest(clarityHttpRequestInformation * info, const char * data,
                               uint16_t size)
 {
     const char * dataRtnd = NULL;
@@ -602,7 +602,7 @@ const char * httpParseResponse(clarityHttpResponseInformation * info,
 
 
 /* builds a http 1.0 request */
-uint16_t httpBuildRequestTextPlain(const clarityHttpInformation * http,
+uint16_t httpBuildRequestTextPlain(const clarityHttpRequestInformation * http,
                                    char * txBuf,
                                    uint16_t txBufSize)
 {

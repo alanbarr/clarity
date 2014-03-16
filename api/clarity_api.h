@@ -108,7 +108,7 @@ typedef struct {
     clarityHttpHeader headers[CLARITY_MAX_HEADERS];
     clarityBuf content;
     clarityBuf body;
-} clarityHttpInformation; /* rename */
+} clarityHttpRequestInformation;
 
 typedef struct {
     clarityHttpVersion version;
@@ -120,7 +120,7 @@ typedef struct {
     void * user;
 } clarityConnectionInformation; 
 
-typedef uint32_t (*clarityHttpMethodCallback)(const clarityHttpInformation * info, 
+typedef uint32_t (*clarityHttpMethodCallback)(const clarityHttpRequestInformation * info, 
                                               clarityConnectionInformation * user);
 
 typedef struct {

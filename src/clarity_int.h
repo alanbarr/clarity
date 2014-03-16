@@ -32,16 +32,16 @@
 clarityError clarityMgmtInit(clarityAccessPointInformation * accessPointConnection);
 clarityError clarityMgmtRegisterProcessStarted(void);
 clarityError clarityMgmtRegisterProcessFinished(void);
-int32_t httpHandle(clarityHttpInformation * info,
+int32_t httpHandle(clarityHttpRequestInformation * info,
                    clarityHttpServerInformation * control,
                    void * user);
 const char * httpRequestProcess(clarityHttpServerInformation * control,
-                                clarityHttpInformation * http,
+                                clarityHttpRequestInformation * http,
                                 clarityConnectionInformation * connection,
                                 const char * data, uint16_t size);
-const char * httpParseRequest(clarityHttpInformation * info,
+const char * httpParseRequest(clarityHttpRequestInformation * info,
                               const char * data, const uint16_t size);
-int32_t httpBuildRequestTextPlain(const clarityHttpInformation * http,
+int32_t httpBuildRequestTextPlain(const clarityHttpRequestInformation * http,
                                   char * txBuf,
                                   uint16_t txBufSize);
 
