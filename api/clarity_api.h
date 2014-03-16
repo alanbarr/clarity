@@ -87,9 +87,10 @@ typedef enum {
     CLARITY_ERROR(CLARITY_SUCCESS)                  \
     CLARITY_ERROR(CLARITY_ERROR)                    \
     CLARITY_ERROR(CLARITY_ERROR_UNDEFINED)          \
-    CLARITY_ERROR(CLARITY_ERROR_RESPONSE)           \
+    CLARITY_ERROR(CLARITY_ERROR_REMOTE_RESPONSE)    \
     CLARITY_ERROR(CLARITY_ERROR_CC3000_WLAN)        \
-    CLARITY_ERROR(CLARITY_ERROR_CC3000_SOCKET)      
+    CLARITY_ERROR(CLARITY_ERROR_CC3000_SOCKET)      \
+    CLARITY_ERROR(CLARITY_ERROR_BUFFER_SIZE)
 
 #ifdef CLARITY_ERROR
 #undef CLARITY_ERROR
@@ -212,16 +213,16 @@ int32_t clarityHttpBuildResponseTextPlain(char * buf,
                                      const char * bodyString);
 
 /* HTTP Server */
-int32_t clarityHttpServerStart(Mutex * cc3000ApiMtx,
+clarityError clarityHttpServerStart(Mutex * cc3000ApiMtx,
                                 controlInformation * control);
-int32_t clarityHttpServerKill(void);
+clarityError clarityHttpServerKill(void);
 
 /* CC3000 API Mutex Protection */
 void clarityCC3000ApiLck(void);
 void clarityCC3000ApiUnlck(void);
 
 
-#define PRINT_MESSAGES              false
+#define PRINT_MESSAGES              true
 
 #if defined(CLAR_PRINT_MESSAGES) && CLAR_PRINT_MESSAGES == true  
 

@@ -157,7 +157,7 @@ clarityError claritySendHttpRequest(const addressInformation * addr,
 
     if ((parseHttpResponse(buf, reqSize) != true))
     {
-        rtn = CLARITY_ERROR_RESPONSE;
+        rtn = CLARITY_ERROR_REMOTE_RESPONSE;
         return rtn;
     }
 

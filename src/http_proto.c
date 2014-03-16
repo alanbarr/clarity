@@ -644,9 +644,11 @@ uint16_t httpBuildRequestTextPlain(const httpInformation * http,
     if (http->body.size != 0)
     {
         bufIndex += snprintf(HTTP_REQ_CURRENT, HTTP_REQ_LEFT,
-                             "%s", HTTP_CONTENT_TYPE_STR);
+                             "%s text/plain", HTTP_CONTENT_TYPE_STR); /* TODO XXX*/
+        bufIndex += snprintf(HTTP_REQ_CURRENT, HTTP_REQ_LEFT,"%s", HTTP_EOL_STR);
+
         bufIndex += snprintf(HTTP_REQ_CURRENT, HTTP_REQ_LEFT,
-                             "%d", http->body.size);
+                             "%s %d", HTTP_CONTENT_LENGTH_STR, http->body.size); /* TODO for all??? */
         bufIndex += snprintf(HTTP_REQ_CURRENT, HTTP_REQ_LEFT,"%s", HTTP_EOL_STR);
     }
 

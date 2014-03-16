@@ -24,15 +24,13 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#if 1
-#include "clarity_api.h"
-#endif
 #include <stdio.h>
-#include "clarity_int.h"
 #include <string.h>
 #include "ch.h"
 #include "cc3000_chibios_api.h"
 #include "socket.h"
+#include "clarity_api.h"
+#include "clarity_int.h"
 
 static WORKING_AREA(httpWorkingArea, 1024);
 
@@ -72,8 +70,6 @@ static msg_t cc3000HttpServer(void * arg)
     
     (void)arg;
 
-    memset(&acceptedAddr, 0, sizeof(acceptedAddr));
-
     while (1)
     {
         CLAR_PRINT("Server: top of while 1", NULL);
@@ -86,12 +82,11 @@ static msg_t cc3000HttpServer(void * arg)
         memset(&acceptedAddr, 0, sizeof(acceptedAddr));
         memset(rxBuf, 0, sizeof(rxBuf));
 
-        clarityCC3000ApiLck();
-
-        while (true)
+        while (killHttpServer != true)
         {
+            clarityCC3000ApiLck();
             if ((accepted.socket = accept(serverSocket, &acceptedAddr,
-                                         &acceptedAddrLen)) < 0)
+                                          &acceptedAddrLen)) < 0)
             {
                 if (accepted.socket == -1)
                 {
@@ -99,7 +94,8 @@ static msg_t cc3000HttpServer(void * arg)
                 }
                 else
                 {
-                    chThdSleep(MS2ST(100));
+                    clarityCC3000ApiUnlck();
+                    chThdSleep(MS2ST(500));
                 }
             }
 
@@ -113,24 +109,26 @@ static msg_t cc3000HttpServer(void * arg)
         {
             CLAR_PRINT("recv() returned error.", NULL);
         }
-        
+
         clarityCC3000ApiUnlck();
 
         if (rxBytes > 0)
         {
             if ((httpRtn = httpRequestProcess(controlInfo,
-                                          &httpInfo, 
-                                          &accepted,
-                                          rxBuf, rxBytes)) == NULL)
+                                              &httpInfo, 
+                                              &accepted,
+                                              rxBuf, rxBytes)) == NULL)
             {
                 CLAR_PRINT("httpRequestProcess() returned NULL.", NULL);
             }
         }
  
+        clarityCC3000ApiLck();
         if (closesocket(accepted.socket) == -1)
         {
             CLAR_PRINT("closesocket() failed for acceptedSocket.", NULL);
         }
+        clarityCC3000ApiUnlck();
 
         chThdSleep(MS2ST(500));
     }
@@ -141,20 +139,27 @@ static msg_t cc3000HttpServer(void * arg)
         CLAR_PRINT("closesocket() failed for serverSocket.", NULL);
     }
     clarityCC3000ApiUnlck();
+ 
+    if (clarityMgmtRegisterProcessFinished() != CLARITY_SUCCESS)
+    {
+        /* TODO */
+    }
 
     return 0;
 }
 
-int32_t clarityHttpServerKill(void)
+clarityError clarityHttpServerKill(void)
 {
     killHttpServer = true;
     /* TODO ensure server ends */
-    return 0;
+    return CLARITY_SUCCESS;
 }
 
-int32_t clarityHttpServerStart(Mutex * cc3000ApiMtx, controlInformation * control)
+clarityError clarityHttpServerStart(Mutex * cc3000ApiMtx,
+                                    controlInformation * control)
 {
     uint16_t blockOpt = SOCK_ON;
+    clarityError rtn = CLARITY_ERROR_UNDEFINED;
     sockaddr_in serverAddr = {0};
 
     cc3000Mtx = cc3000ApiMtx;
@@ -162,11 +167,22 @@ int32_t clarityHttpServerStart(Mutex * cc3000ApiMtx, controlInformation * contro
 
     memset(rxBuf, 0, sizeof(rxBuf));
 
+    if ((rtn = clarityMgmtRegisterProcessStarted()) != CLARITY_SUCCESS)
+    {
+        CLAR_PRINT_ERROR();
+        return rtn;
+    }
 
     /* We need dhcp info here */
     if (cc3000AsyncData.dhcp.present != 1)
     {
         CLAR_PRINT("No DHCP info present", NULL);
+
+        if ((clarityMgmtRegisterProcessFinished()) != CLARITY_SUCCESS)
+        {
+            CLAR_PRINT_ERROR();
+            /* TODO */
+        }
         return 1;
     }
 
@@ -218,7 +234,7 @@ int32_t clarityHttpServerStart(Mutex * cc3000ApiMtx, controlInformation * contro
                                           cc3000HttpServer, NULL);
     }
 
-    return 0;
+    return CLARITY_SUCCESS;
 }
 
 

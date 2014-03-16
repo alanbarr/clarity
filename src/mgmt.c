@@ -23,6 +23,7 @@
 * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
+
 #include <string.h>
 #include "clarity_api.h"
 #include "cc3000_chibios_api.h"
@@ -47,8 +48,10 @@ static Thread * mgmtThd = NULL;
 /* must already be powered on */
 static clarityError connectToWifi(void)
 {
-    clarityCC3000ApiLck();
     int32_t wlanRtn;
+    uint32_t loopIterations = 10;
+
+    clarityCC3000ApiLck();
 
     if (mgmtData.ap->secType == WLAN_SEC_UNSEC)
     {
@@ -67,13 +70,14 @@ static clarityError connectToWifi(void)
                                strnlen(mgmtData.ap->password, MAX_AP_STR_LEN));
     }
 
-    while(cc3000AsyncData.dhcp.present != true)
+    while(cc3000AsyncData.connected != true && 
+          cc3000AsyncData.dhcp.present != true)
     {
         chThdSleep(MS2ST(500));
-        /* TODO some kind of DHCP timeout */
-        if (cc3000AsyncData.connected == false)
+
+        if (loopIterations-- == 0)
         {
-            wlanRtn = 1; /* TODO assuming we have got the cb at this point */
+            wlanRtn = 1;
             break;
         }
     }
@@ -97,6 +101,7 @@ static clarityError clarityMgmtCheckNeedForConnectivty(void)
     if (cc3000AsyncData.connected == false &&
         mgmtData.activeProcesses != 0)
     {
+        CLAR_PRINT_ERROR();
          rtn = connectToWifi();
     }
     chMtxUnlock();
@@ -177,13 +182,18 @@ clarityError clarityMgmtRegisterProcessFinished(void)
     return 0;
 }
 
-
 static msg_t clarityMgmtThd(void *arg)
 {
     (void)arg;
+    
+    #if CH_USE_REGISTRY == TRUE
+        chRegSetThreadName(__FUNCTION__);
+    #endif
 
     while (true)
     {
+
+        chThdSleep(MS2ST(500));
 #if 0
         chMtxLock(&mgmtMutex);
         if (killMgmtThd == true)
@@ -200,12 +210,12 @@ static msg_t clarityMgmtThd(void *arg)
         /* Check to see if we can power down */
         clarityMgmtAttemptPowerDown();
 
-        chThdSleep(MS2ST(500));
     }
 
     return 0;
 }
-int32_t clarityMgmtInit(accessPointInformation * accessPointConnection)
+
+clarityError clarityMgmtInit(accessPointInformation * accessPointConnection)
 {
     chMtxInit(&mgmtMutex);
     memset(&mgmtData, 0, sizeof(mgmtData));
