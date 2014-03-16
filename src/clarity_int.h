@@ -29,19 +29,19 @@
 
 #include "clarity_api.h"
 
-clarityError clarityMgmtInit(accessPointInformation * accessPointConnection);
+clarityError clarityMgmtInit(clarityAccessPointInformation * accessPointConnection);
 clarityError clarityMgmtRegisterProcessStarted(void);
 clarityError clarityMgmtRegisterProcessFinished(void);
-int32_t httpHandle(httpInformation * info,
-                   controlInformation * control,
+int32_t httpHandle(clarityHttpInformation * info,
+                   clarityControlInformation * control,
                    void * user);
-const char * httpRequestProcess(controlInformation * control,
-                                httpInformation * http,
-                                connectionInformation * connection,
+const char * httpRequestProcess(clarityControlInformation * control,
+                                clarityHttpInformation * http,
+                                clarityConnectionInformation * connection,
                                 const char * data, uint16_t size);
-const char * httpParseRequest(httpInformation * info,
+const char * httpParseRequest(clarityHttpInformation * info,
                               const char * data, const uint16_t size);
-int32_t httpBuildRequestTextPlain(const httpInformation * http,
+int32_t httpBuildRequestTextPlain(const clarityHttpInformation * http,
                                   char * txBuf,
                                   uint16_t txBufSize);
 

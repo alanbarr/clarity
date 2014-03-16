@@ -33,12 +33,12 @@
 #include "clarity_api.h"
 #include "http.h"
 
-#ifdef METHOD
-    #undef METHOD
+#ifdef CLARITY_HTTP_METHOD
+    #undef CLARITY_HTTP_METHOD
 #endif 
-#define METHOD(M)    #M,
+#define CLARITY_HTTP_METHOD(M)    #M,
 static const char * methodStrings[] = {
-    METHODS
+    CLARITY_HTTP_METHODS
     "INVALID"
 };
 
@@ -145,7 +145,7 @@ static const char * getHttpVersion(const char * version,
 
 static const char * parseResponseStartLine(const char * data,
                                           uint16_t size,
-                                          httpResInformation * info)
+                                          clarityHttpResInformation * info)
 {
     const char * c = data;
     const char * eol = getEndOfLine(data, size);
@@ -216,10 +216,10 @@ static const char * parseResponseStartLine(const char * data,
  *         in the blank seperator line. */
 static const char * parseHeaders(const char * data,
                                  uint16_t size,
-                                 httpInformation * info)
+                                 clarityHttpInformation * info)
 {
     const char * const dataStart = data;
-    header header;
+    clarityHttpHeader header;
     const char * lineStart = data;
     const char * eol = getEndOfLine(data,size);
     uint8_t headersIndex = 0;
@@ -315,16 +315,16 @@ static const char * parseHeaders(const char * data,
         {
             long length;
             char * end;
-            char temp[MAX_CONTENT_LENGTH_DIGITS];
+            char temp[CLARITY_MAX_CONTENT_LENGTH_DIGITS];
 
-            if (header.value.size >= MAX_CONTENT_LENGTH_DIGITS)
+            if (header.value.size >= CLARITY_MAX_CONTENT_LENGTH_DIGITS)
             {
                 return NULL;
             }
             
             memset(temp,0,sizeof(temp));
             memcpy(temp, header.value.data, header.value.size);
-            temp[MAX_CONTENT_LENGTH_DIGITS-1] = 0; /* Force terminator */
+            temp[CLARITY_MAX_CONTENT_LENGTH_DIGITS-1] = 0; /* Force terminator */
 
             errno = 0;
 
@@ -352,7 +352,7 @@ static const char * parseHeaders(const char * data,
         }
 
         /* Only store if room */
-        else if (headersIndex<MAX_HEADERS)
+        else if (headersIndex < CLARITY_MAX_HEADERS)
         {
             info->headers[headersIndex] = header;
             headersIndex++;
@@ -396,7 +396,7 @@ static const char * parseHeaders(const char * data,
  *         in the body */
 static const char * parseBody(const char * data,
                                   uint16_t size,
-                                  httpInformation * info)
+                                  clarityHttpInformation * info)
 {
     const char * body = NULL;
 
@@ -430,12 +430,12 @@ static const char * parseBody(const char * data,
  
 static const char * parseRequestStartLine(const char * data,
                                           uint16_t size,
-                                          httpInformation * info)
+                                          clarityHttpInformation * info)
 {
     const char * c = data;
     const char * resource = NULL;
     const char * version = NULL;
-    methodType type = 0;
+    clarityHttpMethodType type = 0;
     const char * eol = getEndOfLine(data, size);
 
     if (eol == NULL)
@@ -451,7 +451,7 @@ static const char * parseRequestStartLine(const char * data,
         return NULL;
     }
     
-    for (type = 0; type < METHOD_TYPE_MAX; type++)
+    for (type = 0; type < CLARITY_HTTP_METHOD_MAX; type++)
     {
         if (*c == *methodStrings[type])
         {
@@ -471,7 +471,7 @@ static const char * parseRequestStartLine(const char * data,
         }
     }
 
-    if (type == METHOD_TYPE_MAX)
+    if (type == CLARITY_HTTP_METHOD_MAX)
     {
         CLAR_PRINT_LINE("FAIL");
         return NULL;
@@ -537,8 +537,8 @@ static const char * parseRequestStartLine(const char * data,
     return eol; /* todo range */
 }
 
-const char * httpParseRequest(httpInformation * info, const char * data,
-                                     uint16_t size)
+const char * httpParseRequest(clarityHttpInformation * info, const char * data,
+                              uint16_t size)
 {
     const char * dataRtnd = NULL;
     
@@ -586,7 +586,7 @@ const char * httpParseRequest(httpInformation * info, const char * data,
     }
 }
 
-const char * httpParseResponse(httpResInformation * info, const char * data,
+const char * httpParseResponse(clarityHttpResInformation * info, const char * data,
                                uint16_t size)
 {
     const char * dataRtnd = NULL;
@@ -601,9 +601,9 @@ const char * httpParseResponse(httpResInformation * info, const char * data,
 
 
 /* builds a http 1.0 request */
-uint16_t httpBuildRequestTextPlain(const httpInformation * http,
-                                  char * txBuf,
-                                  uint16_t txBufSize)
+uint16_t httpBuildRequestTextPlain(const clarityHttpInformation * http,
+                                   char * txBuf,
+                                   uint16_t txBufSize)
 {
 #define HTTP_REQ_LEFT      (txBufSize - bufIndex)
 #define HTTP_REQ_CURRENT   (txBuf + bufIndex)
@@ -621,9 +621,9 @@ uint16_t httpBuildRequestTextPlain(const httpInformation * http,
     bufIndex += snprintf(HTTP_REQ_CURRENT, HTTP_REQ_LEFT,"%s", HTTP_EOL_STR);
 
     /* Headers */
-    while (headerIndex < MAX_HEADERS)
+    while (headerIndex < CLARITY_MAX_HEADERS)
     {
-        const header * header = &http->headers[headerIndex];
+        const clarityHttpHeader * header = &http->headers[headerIndex];
         
         if (header->field.size == 0)
         {

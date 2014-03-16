@@ -32,56 +32,41 @@
 #include <stdint.h>
 #include "ch.h"
 
-#define MAX_RESOURCES               4   /* Per control */
-#define MAX_METHODS                 4   /* Per resource */
+#define CLARITY_MAX_RESOURCES               4   /* Per control */
+#define CLARITY_MAX_METHODS                 4   /* Per resource */
 
-#define MAX_HEADERS                 10  /* Maximum stored headers */
+#define CLARITY_MAX_HEADERS                 10  /* Maximum stored headers */
 
 /* TODO should be here? */
-#define MAX_CONTENT_LENGTH_DIGITS   6   /* Max number of characters in string + NULL */
+#define CLARITY_MAX_CONTENT_LENGTH_DIGITS   6   /* Max number of characters in string + NULL */
 
-#define MAX_URL_LENGTH              50  /* URL lengths */
+#define CLARITY_MAX_URL_LENGTH              50  /* URL lengths */
 
-#define MAX_POWER_ADDRESSES         3
+#define CLARITY_MAX_POWER_ADDRESSES         3
 
-#define MAX_AP_STR_LEN              16
+#define CLARITY_MAX_AP_STR_LEN              16
 
-#define MAX_CONTENT_LENGTH_DIGITS   6   /* Max number of characters in string + NULL */
+#define CLARITY_MAX_CONTENT_LENGTH_DIGITS   6   /* Max number of characters in string + NULL */
 
-#define METHODS     \
-    METHOD(GET)     \
-    METHOD(HEAD)    \
-    METHOD(PUT)     \
-    METHOD(POST)    \
-    METHOD(TRACE)   \
-    METHOD(OPTIONS) \
-    METHOD(DELETE)  
+#define CLARITY_HTTP_METHODS     \
+    CLARITY_HTTP_METHOD(GET)     \
+    CLARITY_HTTP_METHOD(HEAD)    \
+    CLARITY_HTTP_METHOD(PUT)     \
+    CLARITY_HTTP_METHOD(POST)    \
+    CLARITY_HTTP_METHOD(TRACE)   \
+    CLARITY_HTTP_METHOD(OPTIONS) \
+    CLARITY_HTTP_METHOD(DELETE)  
 
-#ifdef METHOD
-    #undef METHOD
+#ifdef CLARITY_HTTP_METHOD
+    #undef CLARITY_HTTP_METHOD
 #endif 
-#define METHOD(M)    M,
+#define CLARITY_HTTP_METHOD(M)    M,
 
-# if 0
-#define METHOD_TO_MASK(M) (0x1<<M)
-#endif 
 
 typedef enum {
-    METHODS
-    METHOD_TYPE_MAX
-} methodType;
-
-#if 0
-#ifdef METHOD
-    #undef METHOD
-#endif 
-#define METHOD(M)    M ## _MASK = METHOD_TO_MASK(M),
-
-typedef enum {
-    METHODS
-    METHODS_MASK_MAX
-} methodMask;
-#endif
+    CLARITY_HTTP_METHODS
+    CLARITY_HTTP_METHOD_MAX
+} clarityHttpMethodType;
 
 #define CLARITY_ERRORS                              \
     CLARITY_ERROR(CLARITY_SUCCESS)                  \
@@ -104,85 +89,84 @@ typedef enum {
 typedef struct {
     const char * data; 
     uint16_t size;
-} buf;
+} clarityBuf;
 
 typedef struct {
     uint8_t major;
     uint8_t minor;
-} httpVersion;
+} clarityHttpVersion;
 
 typedef struct {
-    buf field;
-    buf value;
-} header;
+    clarityBuf field;
+    clarityBuf value;
+} clarityHttpHeader;
 
 typedef struct {
-    methodType type;
-    buf resource;
-    httpVersion version;
-    header headers[MAX_HEADERS];
-    buf content;
-    buf body;
-} httpInformation; /* rename */
+    clarityHttpMethodType type;
+    clarityBuf resource;
+    clarityHttpVersion version;
+    clarityHttpHeader headers[CLARITY_MAX_HEADERS];
+    clarityBuf content;
+    clarityBuf body;
+} clarityHttpInformation; /* rename */
 
 typedef struct {
-    httpVersion version;
+    clarityHttpVersion version;
     uint16_t code;
-} httpResInformation;
+} clarityHttpResInformation; /*TODO  Response */
 
 typedef struct {
     int32_t socket;
     void * user;
-} connectionInformation; 
+} clarityConnectionInformation; 
 
-typedef uint32_t (*methodCallback)(const httpInformation * info, 
-                                   connectionInformation * user);
+typedef uint32_t (*clarityHttpMethodCallback)(const clarityHttpInformation * info, 
+                                              clarityConnectionInformation * user);
 
 typedef struct {
-    methodType type;
-    methodCallback callback;
-} methodInformation;
+    clarityHttpMethodType type;
+    clarityHttpMethodCallback callback;
+} clarityHttpMethodInformation;
 
 typedef struct {
     const char * name;
-#if 0
-    methodMask methodsMask; /* Mask of all supported methods */ 
-#endif
-    methodInformation methods[MAX_METHODS];
-} resourceInformation;
+    clarityHttpMethodInformation methods[CLARITY_MAX_METHODS];
+} clarityResourceInformation;
 
 typedef struct { 
+# if 0
     const char * deviceName;
-    resourceInformation resources[MAX_RESOURCES];
-} controlInformation;
+#endif
+    clarityResourceInformation resources[CLARITY_MAX_RESOURCES];
+} clarityControlInformation; /*TODO Http Server */
 
 typedef union {
     uint32_t ip;
-    char url[MAX_URL_LENGTH]; /* XXX needs NULL of strnlen*/
-} addressUrlIp;
+    char url[CLARITY_MAX_URL_LENGTH]; /* XXX needs NULL of strnlen*/
+} clarityAddressUrlIp;
 
 typedef enum {
-    ADDRESS_NONE,
-    ADDRESS_URL,
-    ADDRESS_IP
-} addressType;
+    CLARITY_ADDRESS_NONE,
+    CLARITY_ADDRESS_URL,
+    CLARITY_ADDRESS_IP
+} clarityAddressType;
 
 typedef struct {
-    addressType type;
-    addressUrlIp addr;
-} addressInformation;
+    clarityAddressType type;
+    clarityAddressUrlIp addr;
+} clarityAddressInformation;
 
 typedef enum {
-    TRANSPORT_NONE,
-    TRANSPORT_TCP,
-    TRANSPORT_UDP
-} transportType;
+    CLARITY_TRANSPORT_NONE,
+    CLARITY_TRANSPORT_TCP,
+    CLARITY_TRANSPORT_UDP
+} clarityTransportType;
 
 typedef struct {
-    transportType type;
-    addressInformation addr;
+    clarityTransportType type;
+    clarityAddressInformation addr;
     uint16_t port;
-} transportInformation;
+} clarityTransportInformation;
 
 #if 0
 typedef struct {
@@ -195,26 +179,26 @@ typedef struct {
 #if 0
     enum connMeth;
 #endif
-    char name[MAX_AP_STR_LEN];
+    char name[CLARITY_MAX_AP_STR_LEN];
     uint8_t secType;
-    char password[MAX_AP_STR_LEN];
-} accessPointInformation;
+    char password[CLARITY_MAX_AP_STR_LEN];
+} clarityAccessPointInformation;
 
 
-int32_t clarityInit(accessPointInformation * accessPointConnection);
+int32_t clarityInit(clarityAccessPointInformation * accessPointConnection);
 
 /* HTTP Reply*/
-int32_t claritySendInCb(const connectionInformation * conn,
+int32_t claritySendInCb(const clarityConnectionInformation * conn,
                              const void * data, uint16_t length);
-int32_t clarityHttpBuildResponseTextPlain(char * buf,
-                                     uint16_t bufSize,
+int32_t clarityHttpBuildResponseTextPlain(char * clarityBuf,
+                                     uint16_t clarityBufSize,
                                      uint8_t code,
                                      const char * message,
                                      const char * bodyString);
 
 /* HTTP Server */
 clarityError clarityHttpServerStart(Mutex * cc3000ApiMtx,
-                                controlInformation * control);
+                                    clarityControlInformation * control);
 clarityError clarityHttpServerKill(void);
 
 /* CC3000 API Mutex Protection */

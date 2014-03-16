@@ -31,19 +31,20 @@
 
 /* TODO use to cut short processing */
 #if 0
-int32_t httpHandlerCheckResouceMethod(httpInformation * info)
+int32_t httpHandlerCheckResouceMethod(clarityHttpInformation * info)
 {
     (void)info;
     return true;
 }
 #endif
 
-static int32_t getMethod(resourceInformation * resInfo, methodType method, 
-                      methodInformation ** methodInfo)
+static int32_t getMethod(clarityResourceInformation * resInfo,
+                         clarityHttpMethodType method, 
+                         clarityHttpMethodInformation ** methodInfo)
 {
     uint8_t methIndex;
 
-    for (methIndex=0; methIndex<MAX_METHODS; methIndex++)
+    for (methIndex=0; methIndex<CLARITY_MAX_METHODS; methIndex++)
     {
         if (resInfo->methods[methIndex].type == method)
         {
@@ -55,11 +56,11 @@ static int32_t getMethod(resourceInformation * resInfo, methodType method,
     return false;
 }
 
-static int32_t getResource(controlInformation * con, buf * resBuf,
-                        resourceInformation ** resInfo)
+static int32_t getResource(clarityControlInformation * con, clarityBuf * resBuf,
+                           clarityResourceInformation ** resInfo)
 {
     uint8_t resIndex;
-    for (resIndex=0; resIndex<MAX_RESOURCES; resIndex++)
+    for (resIndex=0; resIndex<CLARITY_MAX_RESOURCES; resIndex++)
     {
         if(strncasecmp(resBuf->data, con->resources[resIndex].name,
                        resBuf->size) == 0)
@@ -72,11 +73,11 @@ static int32_t getResource(controlInformation * con, buf * resBuf,
 }
 
 
-int32_t httpHandle(httpInformation * info,
-                controlInformation * control, void * user)
+int32_t httpHandle(clarityHttpInformation * info,
+                   clarityControlInformation * control, void * user)
 {
-    resourceInformation * resInfo;
-    methodInformation * methInfo;
+    clarityResourceInformation * resInfo;
+    clarityHttpMethodInformation * methInfo;
 
     if (true != getResource(control, &info->resource, &resInfo))
     {
@@ -102,9 +103,9 @@ int32_t httpHandle(httpInformation * info,
 }
 
 
-const char * httpRequestProcess(controlInformation * control,
-                                httpInformation * http,
-                                connectionInformation * connection,
+const char * httpRequestProcess(clarityControlInformation * control,
+                                clarityHttpInformation * http,
+                                clarityConnectionInformation * connection,
                                 const char * data, uint16_t size)
 {
     const char * rtnd = NULL;

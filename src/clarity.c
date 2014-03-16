@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "clarity_api.h"
+#include "clarity_int.h"
 #include "http.h"
 #include "socket.h"
 
@@ -73,7 +74,7 @@ int32_t clarityHttpBuildResponseTextPlain(char * buf,
     return bufIndex;
 }
 
-int32_t claritySendInCb(const connectionInformation * conn,
+int32_t claritySendInCb(const clarityConnectionInformation * conn,
                         const void * data, uint16_t length)
 {
     int32_t rtn;
@@ -86,7 +87,7 @@ int32_t claritySendInCb(const connectionInformation * conn,
 }
 
 
-int32_t clarityInit(accessPointInformation * accessPointConnection)
+int32_t clarityInit(clarityAccessPointInformation * accessPointConnection)
 {
     clarityMgmtInit(accessPointConnection);
     return 0;

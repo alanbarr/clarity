@@ -33,7 +33,7 @@ static Mutex mgmtMutex;
 typedef struct {
     bool active;                /* CC3000 Power */
     uint16_t activeProcesses;   /* Number of running user processes */
-    accessPointInformation * ap;
+    clarityAccessPointInformation * ap;
 } clarityMgmtData;
 
 clarityMgmtData mgmtData;
@@ -57,17 +57,17 @@ static clarityError connectToWifi(void)
     {
         wlanRtn = wlan_connect(mgmtData.ap->secType,
                                mgmtData.ap->name,
-                               strnlen(mgmtData.ap->name, MAX_AP_STR_LEN),
+                               strnlen(mgmtData.ap->name, CLARITY_MAX_AP_STR_LEN),
                                NULL, NULL, 0);
     }
     else
     {
         wlanRtn = wlan_connect(mgmtData.ap->secType,
                                mgmtData.ap->name,
-                               strnlen(mgmtData.ap->name, MAX_AP_STR_LEN),
+                               strnlen(mgmtData.ap->name, CLARITY_MAX_AP_STR_LEN),
                                NULL,
                                (unsigned char*)mgmtData.ap->password,
-                               strnlen(mgmtData.ap->password, MAX_AP_STR_LEN));
+                               strnlen(mgmtData.ap->password, CLARITY_MAX_AP_STR_LEN));
     }
 
     while(cc3000AsyncData.connected != true && 
@@ -215,7 +215,7 @@ static msg_t clarityMgmtThd(void *arg)
     return 0;
 }
 
-clarityError clarityMgmtInit(accessPointInformation * accessPointConnection)
+clarityError clarityMgmtInit(clarityAccessPointInformation * accessPointConnection)
 {
     chMtxInit(&mgmtMutex);
     memset(&mgmtData, 0, sizeof(mgmtData));
