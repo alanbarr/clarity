@@ -29,6 +29,8 @@
 #include "socket.h"
 #include <string.h>
 
+#define HTTP_PORT 80
+
 static clarityError convertAddressInfoToNetworkIp(clarityAddressInformation * addrInfo,
                                                   uint32_t * ip)
 {
@@ -74,19 +76,19 @@ static clarityError sendHttpRequest(clarityAddressInformation * addrInfo,
     sockaddr_in saddr;
     int32_t recvBytes;
 
+    saddr.sin_family = AF_INET;
+    saddr.sin_port = htons(HTTP_PORT);
+
     if ((rtn = clarityMgmtRegisterProcessStarted()) != CLARITY_SUCCESS)
     {
         return rtn;
     }
 
     else if ((rtn = convertAddressInfoToNetworkIp(addrInfo, &(saddr.sin_addr.s_addr)))
-             != CLARITY_SUCCESS)
+                  != CLARITY_SUCCESS)
     {
         return rtn;
     }
-
-    saddr.sin_family = AF_INET;
-    saddr.sin_port = htons(80U);
 
     clarityCC3000ApiLck();
 
@@ -122,12 +124,9 @@ static clarityError sendHttpRequest(clarityAddressInformation * addrInfo,
 
     clarityCC3000ApiUnlck();
 
-    if ((rtn = clarityMgmtRegisterProcessFinished()) != CLARITY_SUCCESS)
-    {
-        return rtn;
-    }
+    clarityMgmtRegisterProcessFinished();
 
-    return CLARITY_ERROR;
+    return rtn;
 }
 
 

@@ -48,6 +48,25 @@
 
 #define CLARITY_MAX_CONTENT_LENGTH_DIGITS   6   /* Max number of characters in string + NULL */
 
+#define CLARITY_ERRORS                              \
+    CLARITY_ERROR(CLARITY_SUCCESS)                  \
+    CLARITY_ERROR(CLARITY_ERROR_UNDEFINED)          \
+    CLARITY_ERROR(CLARITY_ERROR_REMOTE_RESPONSE)    \
+    CLARITY_ERROR(CLARITY_ERROR_CC3000_WLAN)        \
+    CLARITY_ERROR(CLARITY_ERROR_CC3000_SOCKET)      \
+    CLARITY_ERROR(CLARITY_ERROR_BUFFER_SIZE)        \
+    CLARITY_ERROR(CLARITY_ERROR_RANGE)              \
+    CLARITY_ERROR(CLARITY_ERROR_STATE)
+
+#ifdef CLARITY_ERROR
+#undef CLARITY_ERROR
+#endif
+#define CLARITY_ERROR(E) E,
+typedef enum {
+    CLARITY_ERRORS
+    CLARITY_MAX_ERROR
+} clarityError;
+
 #define CLARITY_HTTP_METHODS     \
     CLARITY_HTTP_METHOD(GET)     \
     CLARITY_HTTP_METHOD(HEAD)    \
@@ -61,30 +80,10 @@
     #undef CLARITY_HTTP_METHOD
 #endif 
 #define CLARITY_HTTP_METHOD(M)    M,
-
-
 typedef enum {
     CLARITY_HTTP_METHODS
     CLARITY_HTTP_METHOD_MAX
 } clarityHttpMethodType;
-
-#define CLARITY_ERRORS                              \
-    CLARITY_ERROR(CLARITY_SUCCESS)                  \
-    CLARITY_ERROR(CLARITY_ERROR)                    \
-    CLARITY_ERROR(CLARITY_ERROR_UNDEFINED)          \
-    CLARITY_ERROR(CLARITY_ERROR_REMOTE_RESPONSE)    \
-    CLARITY_ERROR(CLARITY_ERROR_CC3000_WLAN)        \
-    CLARITY_ERROR(CLARITY_ERROR_CC3000_SOCKET)      \
-    CLARITY_ERROR(CLARITY_ERROR_BUFFER_SIZE)
-
-#ifdef CLARITY_ERROR
-#undef CLARITY_ERROR
-#endif
-#define CLARITY_ERROR(E) E,
-typedef enum {
-    CLARITY_ERRORS
-    CLARITY_MAX_ERROR
-} clarityError;
 
 typedef struct {
     const char * data; 
@@ -172,7 +171,7 @@ typedef struct {
 #endif
 
 typedef struct {
-    /* TODO smart config profies etc */
+    /* TODO smart config profiles etc */
 #if 0
     enum connMeth;
 #endif
@@ -181,12 +180,18 @@ typedef struct {
     char password[CLARITY_MAX_AP_STR_LEN];
 } clarityAccessPointInformation;
 
-/* General */
-clarityError clarityInit(clarityAccessPointInformation * accessPointConnection);
+
+
+/* Initialisation */
+typedef void (*clarityUnresponsiveCallback)(void);
+
+clarityError clarityInit(Mutex * cc3000ApiMtx,
+                         clarityUnresponsiveCallback cb,
+                         clarityAccessPointInformation * accessPointConnection);
+clarityError clarityShutdown(void);
 
 /* HTTP Server */
-clarityError clarityHttpServerStart(Mutex * cc3000ApiMtx,
-                                    clarityHttpServerInformation * control);
+clarityError clarityHttpServerStart(clarityHttpServerInformation * control);
 clarityError clarityHttpServerKill(void);
 clarityError claritySendInCb(const clarityConnectionInformation * conn,
                              const void * data, uint16_t length);
@@ -202,6 +207,24 @@ clarityError claritySendHttpRequest(clarityAddressInformation * addr,
                                     uint16_t bufSize,
                                     clarityHttpResponseInformation * response);
 /* SNTP Client */
+typedef struct {
+    uint8_t hour;   /* 24 hour fmt */
+    uint8_t minute; /* 0 - 59 */
+    uint8_t second; /* 0 - 59 */
+} clarityTime;
+
+typedef struct {
+    uint8_t year;   /* e.g. 2000 */
+    uint8_t month;  /* 1 (Jan) - 12 (Dec) */
+    uint8_t date;   /* 1 - 31 */
+    uint8_t day;    /* 1 (Mon) - 7 (Sun)*/
+} clarityDate;
+
+typedef struct {
+    clarityTime time;
+    clarityDate date;
+} clarityTimeDate;
+
 clarityError clarityGetSntpTime(char * buf, uint16_t bufSize,
                                 uint32_t * ntpSeconds);
 

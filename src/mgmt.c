@@ -28,8 +28,11 @@
 #include "clarity_api.h"
 #include "cc3000_chibios_api.h"
 
-static Mutex mgmtMutex;
- 
+#define CC3000_MUTEX_LOCKUP_S      300
+#define CC3000_MUTEX_POLL_TIME_MS  100
+#define CC3000_MUTEX_POLL_COUNT    (CC3000_MUTEX_LOCKUP_S * 1000/    \
+                                    CC3000_MUTEX_POLL_TIME_MS)
+
 typedef struct {
     bool active;                /* CC3000 Power */
     uint16_t activeProcesses;   /* Number of running user processes */
@@ -38,12 +41,18 @@ typedef struct {
 
 clarityMgmtData mgmtData;
 
-static WORKING_AREA(clarityMgmtThdWorkingArea, 256);
+static Mutex mgmtMutex;
+static Mutex * cc3000Mtx;
 
-#if 0
-static bool killMgmtThd;
-#endif
-static Thread * mgmtThd = NULL;
+static WORKING_AREA(connectivityMonThdWorkingArea, 128);
+static Thread * connectivityMonThd = NULL;
+static bool killConnectivityMonThd;
+
+static WORKING_AREA(responseMonThdWorkingArea, 128);
+static Thread * responseMonThd= NULL;
+static bool killResponseMonThd;
+
+static clarityUnresponsiveCallback unresponsiveCb;
 
 /* must already be powered on */
 static clarityError connectToWifi(void)
@@ -90,7 +99,7 @@ static clarityError connectToWifi(void)
     }
     else
     {
-        return CLARITY_ERROR;
+        return CLARITY_ERROR_CC3000_WLAN;
     }
 }
 
@@ -175,72 +184,153 @@ clarityError clarityMgmtRegisterProcessFinished(void)
     chMtxLock(&mgmtMutex);
     if (mgmtData.activeProcesses == 0)
     {
-        return 1;
+        chMtxUnlock();
+        return CLARITY_ERROR_STATE;
     }
     mgmtData.activeProcesses--;
     chMtxUnlock();
-    return 0;
+    clarityMgmtAttemptPowerDown();
+    return CLARITY_SUCCESS;
 }
 
-static msg_t clarityMgmtThd(void *arg)
+static msg_t clarityMgmtConnectivityMonitoringThd(void *arg)
 {
     (void)arg;
     
     #if CH_USE_REGISTRY == TRUE
-        chRegSetThreadName(__FUNCTION__);
+    chRegSetThreadName(__FUNCTION__);
     #endif
 
-    while (true)
+    while (killConnectivityMonThd == false)
     {
-
         chThdSleep(MS2ST(500));
-#if 0
-        chMtxLock(&mgmtMutex);
-        if (killMgmtThd == true)
-        {
-            chMtxUnlock();
-            break;
-        }
-        chMtxUnlock();
-#endif
 
         /* Check for disconnect */
         clarityMgmtCheckNeedForConnectivty();
 
+# if 0
         /* Check to see if we can power down */
         clarityMgmtAttemptPowerDown();
+#endif
 
     }
 
-    return 0;
+    return CLARITY_SUCCESS;
 }
 
-clarityError clarityMgmtInit(clarityAccessPointInformation * accessPointConnection)
+
+static msg_t clarityMgmtResponseMonitoringThd(void *arg)
+{
+    uint32_t attempts = 0;
+
+    (void)arg;
+    
+    #if CH_USE_REGISTRY == TRUE
+    chRegSetThreadName(__FUNCTION__);
+    #endif
+
+    while (killResponseMonThd == false)
+    {
+        if (chMtxTryLock(cc3000Mtx) == TRUE)
+        {
+            chMtxUnlock();
+            attempts = 0;
+        }
+        else 
+        {
+            attempts++;
+            if (attempts == CC3000_MUTEX_POLL_COUNT)
+            {
+                unresponsiveCb();
+            }
+        }
+
+        chThdSleep(MS2ST(CC3000_MUTEX_POLL_TIME_MS));
+    }
+    return CLARITY_SUCCESS;
+}
+
+static clarityError clarityMgmtInit(clarityAccessPointInformation * apInfo,
+                                    clarityUnresponsiveCallback cb)
 {
     chMtxInit(&mgmtMutex);
     memset(&mgmtData, 0, sizeof(mgmtData));
 
     chMtxLock(&mgmtMutex);
-#if 0
-    killMgmtThd = false;
-#endif
+    killConnectivityMonThd = false;
     chMtxUnlock();
 
-    mgmtData.ap = accessPointConnection;
+    mgmtData.ap = apInfo;
 
-    mgmtThd = chThdCreateStatic(clarityMgmtThdWorkingArea,
-                                sizeof(clarityMgmtThdWorkingArea),
-                                NORMALPRIO + 10,   /* TODO */
-                                clarityMgmtThd,          
+    connectivityMonThd = chThdCreateStatic(connectivityMonThdWorkingArea,
+                                sizeof(connectivityMonThdWorkingArea),
+                                NORMALPRIO + 1,
+                                clarityMgmtConnectivityMonitoringThd,          
                                 NULL);         
-    return 0;
+    if (cb != NULL)
+    {
+        killResponseMonThd = false;
+        unresponsiveCb = cb;
+        responseMonThd = chThdCreateStatic(responseMonThdWorkingArea,
+                                sizeof(responseMonThdWorkingArea),
+                                NORMALPRIO + 1,
+                                clarityMgmtResponseMonitoringThd,          
+                                NULL);       
+    }
+    return CLARITY_SUCCESS;
 }
 
 
-clarityError clarityInit(clarityAccessPointInformation * accessPointConnection)
+static clarityError clarityMgmtShutdown(void)
 {
-    clarityMgmtInit(accessPointConnection);
-    return 0;
+    if (mgmtData.activeProcesses != 0)
+    {
+        return CLARITY_ERROR_STATE;
+    }
+
+    chMtxLock(&mgmtMutex);
+    killConnectivityMonThd = true;
+    killResponseMonThd = true;
+    chMtxUnlock();
+
+    chThdWait(connectivityMonThd);
+
+    if (responseMonThd != NULL)
+    {
+        chThdWait(responseMonThd);
+    }
+
+    return CLARITY_SUCCESS;
+}
+
+void clarityCC3000ApiLck(void)
+{ 
+    if (cc3000Mtx != NULL)
+    {
+        chMtxLock(cc3000Mtx);
+    }
+}
+
+void clarityCC3000ApiUnlck(void)
+{
+    if (cc3000Mtx != NULL)
+    {
+        chMtxUnlock();
+    }
+}
+
+
+clarityError clarityInit(Mutex * cc3000ApiMtx,
+                         clarityUnresponsiveCallback cb,
+                         clarityAccessPointInformation * accessPointConnection)
+{
+    cc3000Mtx = cc3000ApiMtx;
+    return clarityMgmtInit(accessPointConnection, cb);
+}
+
+clarityError clarityShutdown(void)
+{
+   return clarityMgmtShutdown();
 }
 
 

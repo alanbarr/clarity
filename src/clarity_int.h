@@ -29,7 +29,6 @@
 
 #include "clarity_api.h"
 
-clarityError clarityMgmtInit(clarityAccessPointInformation * accessPointConnection);
 clarityError clarityMgmtRegisterProcessStarted(void);
 clarityError clarityMgmtRegisterProcessFinished(void);
 int32_t httpHandle(clarityHttpRequestInformation * info,

@@ -48,7 +48,7 @@
 #define NTP_SECONDS_INDEX               0
 #define NTP_SECONDS_FRACTION_INDEX      1
 
-#define NTP_UNIX_EPOCH_DIFFERENCE       2208988800
+#define NTP_UNIX_EPOCH_DIFFERENCE       2208988800U
 
 #define compile_time_assert(X)                                              \
     extern int (*compile_assert(void))[sizeof(struct {                      \
@@ -197,4 +197,46 @@ clarityError clarityGetSntpTime(char * buf, uint16_t bufSize,
     return CLARITY_SUCCESS;
 }
 
+
+clarityError claritySntpTimeBrokenDown(clarityTimeDate * brokenDown,
+                                       uint32_t sntpSeconds)
+{
+    struct tm result;
+    time_t time = 0;
+
+    memset(&result, 0, sizeof(result));
+
+    if (sntpSeconds <= NTP_UNIX_EPOCH_DIFFERENCE)
+    {
+        return CLARITY_ERROR_RANGE;
+    }
+    
+    time = sntpSeconds - NTP_UNIX_EPOCH_DIFFERENCE;
+
+    if (gmtime_r(&time, &result) == NULL)
+    {
+        return CLARITY_ERROR_RANGE;
+    }
+
+    if (result.tm_year < 100 || result.tm_year > 199)
+    {
+        return CLARITY_ERROR_RANGE;
+    }
+
+    brokenDown->time.hour   = result.tm_hour;
+    brokenDown->time.minute = result.tm_min;
+    brokenDown->time.second = result.tm_sec;
+
+    brokenDown->date.year  = result.tm_year-100;
+    brokenDown->date.month = result.tm_mon+1;
+    brokenDown->date.date  = result.tm_mday;
+    brokenDown->date.day   = result.tm_wday; 
+
+    if (brokenDown->date.day == 0)
+    {
+        brokenDown->date.day = 7;
+    } 
+
+    return CLARITY_SUCCESS;
+}
 

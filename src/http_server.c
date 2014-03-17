@@ -32,6 +32,8 @@
 #include "clarity_api.h"
 #include "clarity_int.h"
 
+#define HTTP_PORT 80
+
 static WORKING_AREA(httpWorkingArea, 1024);
 
 static Thread * httpServerThd = NULL;
@@ -42,25 +44,7 @@ static clarityHttpServerInformation * controlInfo;
 static clarityHttpRequestInformation httpInfo;
 static int serverSocket;
 
-static Mutex * cc3000Mtx;
-
-void clarityCC3000ApiLck(void)
-{ 
-    if (cc3000Mtx != NULL)
-    {
-        chMtxLock(cc3000Mtx);
-    }
-}
-
-void clarityCC3000ApiUnlck(void)
-{
-    if (cc3000Mtx != NULL)
-    {
-        chMtxUnlock();
-    }
-}
-
-static msg_t cc3000HttpServer(void * arg)
+static msg_t cc3000HttpServerThd(void * arg)
 {
     sockaddr acceptedAddr;
     socklen_t acceptedAddrLen = sizeof(acceptedAddr);
@@ -90,7 +74,7 @@ static msg_t cc3000HttpServer(void * arg)
             {
                 if (accepted.socket == -1)
                 {
-                    CLAR_PRINT("accept() returned error: %d", accepted.socket);
+                    CLAR_PRINT_ERROR();
                 }
                 else
                 {
@@ -107,7 +91,7 @@ static msg_t cc3000HttpServer(void * arg)
         
         if ((rxBytes = recv(accepted.socket, rxBuf, sizeof(rxBuf), 0)) == -1)
         {
-            CLAR_PRINT("recv() returned error.", NULL);
+            CLAR_PRINT_ERROR();
         }
 
         clarityCC3000ApiUnlck();
@@ -119,14 +103,14 @@ static msg_t cc3000HttpServer(void * arg)
                                               &accepted,
                                               rxBuf, rxBytes)) == NULL)
             {
-                CLAR_PRINT("httpRequestProcess() returned NULL.", NULL);
+                CLAR_PRINT_ERROR();
             }
         }
  
         clarityCC3000ApiLck();
         if (closesocket(accepted.socket) == -1)
         {
-            CLAR_PRINT("closesocket() failed for acceptedSocket.", NULL);
+            CLAR_PRINT_ERROR();
         }
         clarityCC3000ApiUnlck();
 
@@ -136,36 +120,37 @@ static msg_t cc3000HttpServer(void * arg)
     clarityCC3000ApiLck();
     if (closesocket(serverSocket) == -1)
     {
-        CLAR_PRINT("closesocket() failed for serverSocket.", NULL);
+        CLAR_PRINT_ERROR();
     }
     clarityCC3000ApiUnlck();
  
     if (clarityMgmtRegisterProcessFinished() != CLARITY_SUCCESS)
     {
-        /* TODO */
+        CLAR_PRINT_ERROR();
     }
 
-    return 0;
+    return CLARITY_SUCCESS;;
 }
 
 clarityError clarityHttpServerKill(void)
 {
     killHttpServer = true;
+    chThdWait(httpServerThd);
     /* TODO ensure server ends */
     return CLARITY_SUCCESS;
 }
 
-clarityError clarityHttpServerStart(Mutex * cc3000ApiMtx,
-                                    clarityHttpServerInformation * control)
+clarityError clarityHttpServerStart(clarityHttpServerInformation * control)
 {
     uint16_t blockOpt = SOCK_ON;
     clarityError rtn = CLARITY_ERROR_UNDEFINED;
     sockaddr_in serverAddr = {0};
-
-    cc3000Mtx = cc3000ApiMtx;
     controlInfo = control;
 
     memset(rxBuf, 0, sizeof(rxBuf));
+
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(HTTP_PORT);
 
     if ((rtn = clarityMgmtRegisterProcessStarted()) != CLARITY_SUCCESS)
     {
@@ -181,18 +166,9 @@ clarityError clarityHttpServerStart(Mutex * cc3000ApiMtx,
         if ((clarityMgmtRegisterProcessFinished()) != CLARITY_SUCCESS)
         {
             CLAR_PRINT_ERROR();
-            /* TODO */
         }
-        return 1;
+        return CLARITY_ERROR_UNDEFINED;
     }
-
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(80);
-#if 0
-    serverAddr.sin_addr.s_addr = *(int *)cc3000AsyncData.dhcp.info.aucIP; 
-#endif
-    CLAR_PRINT("ALAN DEBUG DHCP ADDR IS %x", serverAddr.sin_addr.s_addr);
-
 
     clarityCC3000ApiLck();
 
@@ -200,13 +176,14 @@ clarityError clarityHttpServerStart(Mutex * cc3000ApiMtx,
                                IPPROTO_TCP)) == -1)
     {
         CLAR_PRINT("socket() returned error.", NULL);
-        while(1);
+        rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
+
     else if (setsockopt(serverSocket, SOL_SOCKET, SOCKOPT_ACCEPT_NONBLOCK,
                         &blockOpt, sizeof(blockOpt)) == -1)
     {
         CLAR_PRINT("setsockopt() returned error.", NULL);
-        while(1);
+        rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
 
     else if (bind(serverSocket, (sockaddr *)&serverAddr,
@@ -214,14 +191,14 @@ clarityError clarityHttpServerStart(Mutex * cc3000ApiMtx,
     {
         serverSocket = -1;
         CLAR_PRINT("bind() returned error.", NULL);
-        while(1);
+        rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
 
     else if (listen(serverSocket, 1) != 0)
     {
         serverSocket = -1;
         CLAR_PRINT("bind() returned error.", NULL);
-        while(1);
+        rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
      
     clarityCC3000ApiUnlck();
@@ -231,12 +208,11 @@ clarityError clarityHttpServerStart(Mutex * cc3000ApiMtx,
         httpServerThd = chThdCreateStatic(httpWorkingArea,
                                           sizeof(httpWorkingArea),
                                           NORMALPRIO,
-                                          cc3000HttpServer, NULL);
+                                          cc3000HttpServerThd, NULL);
     }
 
-    return CLARITY_SUCCESS;
+    return rtn;
 }
-
 
 clarityError claritySendInCb(const clarityConnectionInformation * conn,
                              const void * data, uint16_t length)
