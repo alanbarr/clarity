@@ -238,3 +238,16 @@ clarityError clarityHttpServerStart(Mutex * cc3000ApiMtx,
 }
 
 
+clarityError claritySendInCb(const clarityConnectionInformation * conn,
+                             const void * data, uint16_t length)
+{
+    int32_t rtn;
+
+    clarityCC3000ApiLck();
+    rtn = send(conn->socket, data, length, 0);
+    clarityCC3000ApiUnlck();
+
+    return rtn;
+}
+
+

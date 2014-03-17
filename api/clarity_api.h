@@ -181,22 +181,29 @@ typedef struct {
     char password[CLARITY_MAX_AP_STR_LEN];
 } clarityAccessPointInformation;
 
-
-int32_t clarityInit(clarityAccessPointInformation * accessPointConnection);
-
-/* HTTP Reply*/
-int32_t claritySendInCb(const clarityConnectionInformation * conn,
-                             const void * data, uint16_t length);
-int32_t clarityHttpBuildResponseTextPlain(char * clarityBuf,
-                                     uint16_t clarityBufSize,
-                                     uint8_t code,
-                                     const char * message,
-                                     const char * bodyString);
+/* General */
+clarityError clarityInit(clarityAccessPointInformation * accessPointConnection);
 
 /* HTTP Server */
 clarityError clarityHttpServerStart(Mutex * cc3000ApiMtx,
                                     clarityHttpServerInformation * control);
 clarityError clarityHttpServerKill(void);
+clarityError claritySendInCb(const clarityConnectionInformation * conn,
+                             const void * data, uint16_t length);
+clarityError clarityHttpBuildResponseTextPlain(char * clarityBuf,
+                                               uint16_t clarityBufSize,
+                                               uint8_t code,
+                                               const char * message,
+                                               const char * bodyString);
+/* HTTP Client */
+clarityError claritySendHttpRequest(clarityAddressInformation * addr,
+                                    const clarityHttpRequestInformation * request,
+                                    char * buf,
+                                    uint16_t bufSize,
+                                    clarityHttpResponseInformation * response);
+/* SNTP Client */
+clarityError clarityGetSntpTime(char * buf, uint16_t bufSize,
+                                uint32_t * ntpSeconds);
 
 /* CC3000 API Mutex Protection */
 void clarityCC3000ApiLck(void);

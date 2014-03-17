@@ -25,19 +25,21 @@
 *******************************************************************************/
 
 #include "clarity_api.h"
+#include "clarity_int.h"
 #include "socket.h"
+#include <string.h>
 
-static clarityError convertAddressInfoToNetworkIp(const addressInformation * addrInfo,
+static clarityError convertAddressInfoToNetworkIp(clarityAddressInformation * addrInfo,
                                                   uint32_t * ip)
 {
     clarityError rtn = CLARITY_ERROR_UNDEFINED;
 
-    if (addrInfo->type == ADDRESS_URL)
+    if (addrInfo->type == CLARITY_ADDRESS_URL)
     {
         clarityCC3000ApiLck();
 
         if (gethostbyname(addrInfo->addr.url,
-                          strnlen(addrInfo->addr.url, MAX_URL_LEN)
+                          strnlen(addrInfo->addr.url, CLARITY_MAX_URL_LENGTH),
                           ip) < 0)
         {
             rtn = CLARITY_ERROR_CC3000_SOCKET;
@@ -61,25 +63,24 @@ static clarityError convertAddressInfoToNetworkIp(const addressInformation * add
     return rtn;
 }
 
-static clarityError sendHttpRequest(const addressInformation * addrInfo,
+static clarityError sendHttpRequest(clarityAddressInformation * addrInfo,
                                     char * buf,
                                     uint16_t bufSize,
                                     uint16_t reqSize,
                                     uint16_t * recvSize)
 {
     clarityError rtn = CLARITY_ERROR_UNDEFINED;
-    int32_t socket = -1;
+    int32_t sockfd = -1;
     sockaddr_in saddr;
-    uint32_t ip;
     int32_t recvBytes;
 
-    if (rtn = (clarityMgmtRegisterProcessStarted()) != CLARITY_SUCCESS)
+    if ((rtn = clarityMgmtRegisterProcessStarted()) != CLARITY_SUCCESS)
     {
         return rtn;
     }
 
-    if (rtn = (convertAddressInfoToNetworkIp(addrInfo, &(saddr.sin_addr))
-        != CLARITY_SUCCESS))
+    else if ((rtn = convertAddressInfoToNetworkIp(addrInfo, &(saddr.sin_addr.s_addr)))
+             != CLARITY_SUCCESS)
     {
         return rtn;
     }
@@ -89,20 +90,20 @@ static clarityError sendHttpRequest(const addressInformation * addrInfo,
 
     clarityCC3000ApiLck();
 
-    if ((socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
     {
         rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
-    else if (connect(socket, &saddr, sizeof(saddr)) == - 1)
+    else if (connect(sockfd, (sockaddr*)&saddr, sizeof(saddr)) == - 1)
     {
         rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
     /* TODO XXX send size - wlan_tx_buffer overflow + partial tx??? */
-    else if (send(socket, buf, reqSize) != reqSize)
+    else if (send(sockfd, buf, reqSize, 0) != reqSize)
     {
         rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
-    else if ((recvBytes = recv(socket, buf, bufSize, 0)) == -1)
+    else if ((recvBytes = recv(sockfd, buf, bufSize, 0)) == -1)
     {
         rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
@@ -111,9 +112,9 @@ static clarityError sendHttpRequest(const addressInformation * addrInfo,
         *recvSize = recvBytes;
     }
 
-    if (socket != -1)
+    if (sockfd != -1)
     {
-        if (closesocket(socket) != 0)
+        if (closesocket(sockfd) != 0)
         {
             rtn = CLARITY_ERROR_CC3000_SOCKET;
         }
@@ -121,7 +122,7 @@ static clarityError sendHttpRequest(const addressInformation * addrInfo,
 
     clarityCC3000ApiUnlck();
 
-    if (rtn = (clarityMgmtRegisterProcessFinished()) != CLARITY_SUCCESS)
+    if ((rtn = clarityMgmtRegisterProcessFinished()) != CLARITY_SUCCESS)
     {
         return rtn;
     }
@@ -130,32 +131,35 @@ static clarityError sendHttpRequest(const addressInformation * addrInfo,
 }
 
 
-/* buf is reused */
-clarityError claritySendHttpRequest(const addressInformation * addr,
-                                    const httpInformation * http,
+/* buf is reused 
+ * TODO get addr to a const*/
+clarityError claritySendHttpRequest(clarityAddressInformation * addr,
+                                    const clarityHttpRequestInformation * request,
                                     char * buf,
-                                    uint16_t bufSize)
+                                    uint16_t bufSize,
+                                    clarityHttpResponseInformation * response)
 {
     uint16_t reqSize = 0;
     clarityError rtn = CLARITY_ERROR_UNDEFINED;
+    uint16_t recvSize;
 
     /* TODO unsupported*/
-    if (http->type == GET)
+    if (request->type == GET)
     {
         return CLARITY_ERROR_UNDEFINED;
     }
 
-    if ((reqSize = httpBuildRequestTextPlain(http, buf, bufSize)) == 0)
+    if ((reqSize = httpBuildRequestTextPlain(request, buf, bufSize)) == 0)
     {
         return rtn;
     }
 
-    if ((rtn = sendHttpRequest(addr, buf, bufSize, reqSize)) != CLARITY_SUCCESS)
+    if ((rtn = sendHttpRequest(addr, buf, bufSize, reqSize, &recvSize)) != CLARITY_SUCCESS)
     {
         return rtn;
     }
 
-    if ((parseHttpResponse(buf, reqSize) != true))
+    if (httpParseResponse(response, buf, recvSize) == NULL)
     {
         rtn = CLARITY_ERROR_REMOTE_RESPONSE;
         return rtn;

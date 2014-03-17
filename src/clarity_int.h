@@ -45,4 +45,7 @@ int32_t httpBuildRequestTextPlain(const clarityHttpRequestInformation * http,
                                   char * txBuf,
                                   uint16_t txBufSize);
 
+const char * httpParseResponse(clarityHttpResponseInformation * info,
+                               const char * data,
+                               uint16_t size);
 #endif /* __CLARITY_INT_H__ */

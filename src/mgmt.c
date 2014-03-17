@@ -237,6 +237,10 @@ clarityError clarityMgmtInit(clarityAccessPointInformation * accessPointConnecti
 }
 
 
-
+clarityError clarityInit(clarityAccessPointInformation * accessPointConnection)
+{
+    clarityMgmtInit(accessPointConnection);
+    return 0;
+}
 
 
