@@ -46,11 +46,9 @@ static Mutex * cc3000Mtx;
 
 static WORKING_AREA(connectivityMonThdWorkingArea, 128);
 static Thread * connectivityMonThd = NULL;
-static bool killConnectivityMonThd;
 
 static WORKING_AREA(responseMonThdWorkingArea, 128);
 static Thread * responseMonThd= NULL;
-static bool killResponseMonThd;
 
 static clarityUnresponsiveCallback unresponsiveCb;
 
@@ -201,7 +199,7 @@ static msg_t clarityMgmtConnectivityMonitoringThd(void *arg)
     chRegSetThreadName(__FUNCTION__);
     #endif
 
-    while (killConnectivityMonThd == false)
+    while (chThdShouldTerminate() == FALSE)
     {
         chThdSleep(MS2ST(500));
 
@@ -229,7 +227,7 @@ static msg_t clarityMgmtResponseMonitoringThd(void *arg)
     chRegSetThreadName(__FUNCTION__);
     #endif
 
-    while (killResponseMonThd == false)
+    while (chThdShouldTerminate() == FALSE)
     {
         if (chMtxTryLock(cc3000Mtx) == TRUE)
         {
@@ -257,7 +255,6 @@ static clarityError clarityMgmtInit(clarityAccessPointInformation * apInfo,
     memset(&mgmtData, 0, sizeof(mgmtData));
 
     chMtxLock(&mgmtMutex);
-    killConnectivityMonThd = false;
     chMtxUnlock();
 
     mgmtData.ap = apInfo;
@@ -269,7 +266,6 @@ static clarityError clarityMgmtInit(clarityAccessPointInformation * apInfo,
                                 NULL);         
     if (cb != NULL)
     {
-        killResponseMonThd = false;
         unresponsiveCb = cb;
         responseMonThd = chThdCreateStatic(responseMonThdWorkingArea,
                                 sizeof(responseMonThdWorkingArea),
@@ -289,14 +285,14 @@ static clarityError clarityMgmtShutdown(void)
     }
 
     chMtxLock(&mgmtMutex);
-    killConnectivityMonThd = true;
-    killResponseMonThd = true;
+    chThdTerminate(connectivityMonThd);
     chMtxUnlock();
 
     chThdWait(connectivityMonThd);
 
     if (responseMonThd != NULL)
     {
+        chThdTerminate(responseMonThd);
         chThdWait(responseMonThd);
     }
 
