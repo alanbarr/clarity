@@ -37,7 +37,6 @@
 static WORKING_AREA(httpWorkingArea, 1024);
 
 static Thread * httpServerThd = NULL;
-static bool killHttpServer = false;
 static char rxBuf[1000];
 
 static clarityHttpServerInformation * controlInfo;
@@ -58,7 +57,7 @@ static msg_t cc3000HttpServerThd(void * arg)
     {
         CLAR_PRINT("Server: top of while 1", NULL);
 
-        if (killHttpServer == true)
+        if (chThdShouldTerminate() == TRUE)
         {
             break;
         }
@@ -66,7 +65,7 @@ static msg_t cc3000HttpServerThd(void * arg)
         memset(&acceptedAddr, 0, sizeof(acceptedAddr));
         memset(rxBuf, 0, sizeof(rxBuf));
 
-        while (killHttpServer != true)
+        while (chThdShouldTerminate() == FALSE)
         {
             clarityCC3000ApiLck();
             if ((accepted.socket = accept(serverSocket, &acceptedAddr,
@@ -132,11 +131,14 @@ static msg_t cc3000HttpServerThd(void * arg)
     return CLARITY_SUCCESS;;
 }
 
-clarityError clarityHttpServerKill(void)
+clarityError clarityHttpServerStop(void)
 {
-    killHttpServer = true;
-    chThdWait(httpServerThd);
-    /* TODO ensure server ends */
+    if (httpServerThd != NULL)
+    {
+        chThdTerminate(httpServerThd);
+        chThdWait(httpServerThd);
+        httpServerThd = NULL;
+    }
     return CLARITY_SUCCESS;
 }
 

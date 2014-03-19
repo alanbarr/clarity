@@ -192,7 +192,7 @@ clarityError clarityShutdown(void);
 
 /* HTTP Server */
 clarityError clarityHttpServerStart(clarityHttpServerInformation * control);
-clarityError clarityHttpServerKill(void);
+clarityError clarityHttpServerStop(void);
 clarityError claritySendInCb(const clarityConnectionInformation * conn,
                              const void * data, uint16_t length);
 clarityError clarityHttpBuildResponseTextPlain(char * clarityBuf,
@@ -202,9 +202,9 @@ clarityError clarityHttpBuildResponseTextPlain(char * clarityBuf,
                                                const char * bodyString);
 /* HTTP Client */
 clarityError claritySendHttpRequest(clarityAddressInformation * addr,
-                                    const clarityHttpRequestInformation * request,
                                     char * buf,
                                     uint16_t bufSize,
+                                    uint16_t requestSize,
                                     clarityHttpResponseInformation * response);
 /* SNTP Client */
 typedef struct {
@@ -227,6 +227,13 @@ typedef struct {
 
 clarityError clarityGetSntpTime(char * buf, uint16_t bufSize,
                                 uint32_t * ntpSeconds);
+
+/* Time Conversions */
+#include <time.h>
+clarityError clarityTimeFromUnix(clarityTimeDate * clarTD, time_t unix);
+clarityError clarityTimeToUnix(clarityTimeDate * clarTD, time_t * unix);
+clarityError clarityTimeFromSntp(clarityTimeDate * clarTD, uint32_t sntp);
+clarityError clarityTimeIncrement(clarityTimeDate * clarTD, uint32_t seconds);
 
 /* CC3000 API Mutex Protection */
 void clarityCC3000ApiLck(void);

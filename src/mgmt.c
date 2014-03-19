@@ -284,10 +284,11 @@ static clarityError clarityMgmtShutdown(void)
         return CLARITY_ERROR_STATE;
     }
 
+    clarityHttpServerStop();
+
     chMtxLock(&mgmtMutex);
     chThdTerminate(connectivityMonThd);
     chMtxUnlock();
-
     chThdWait(connectivityMonThd);
 
     if (responseMonThd != NULL)

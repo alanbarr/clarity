@@ -130,13 +130,14 @@ static clarityError sendHttpRequest(clarityAddressInformation * addrInfo,
 }
 
 
+# if 0
 /* buf is reused 
  * TODO get addr to a const*/
-clarityError claritySendHttpRequest(clarityAddressInformation * addr,
-                                    const clarityHttpRequestInformation * request,
-                                    char * buf,
-                                    uint16_t bufSize,
-                                    clarityHttpResponseInformation * response)
+clarityError clarityBuildSendHttpRequest(clarityAddressInformation * addr,
+                                         const clarityHttpRequestInformation * request,
+                                         char * buf,
+                                         uint16_t bufSize,
+                                         clarityHttpResponseInformation * response)
 {
     uint16_t reqSize = 0;
     clarityError rtn = CLARITY_ERROR_UNDEFINED;
@@ -154,6 +155,38 @@ clarityError claritySendHttpRequest(clarityAddressInformation * addr,
     }
 
     if ((rtn = sendHttpRequest(addr, buf, bufSize, reqSize, &recvSize)) != CLARITY_SUCCESS)
+    {
+        return rtn;
+    }
+
+    if (httpParseResponse(response, buf, recvSize) == NULL)
+    {
+        rtn = CLARITY_ERROR_REMOTE_RESPONSE;
+        return rtn;
+    }
+
+    return rtn;
+}
+#endif
+
+/* buf is reused 
+ * TODO get addr to a const*/
+clarityError claritySendHttpRequest(clarityAddressInformation * addr,
+                                    char * buf,
+                                    uint16_t bufSize,
+                                    uint16_t requestSize,
+                                    clarityHttpResponseInformation * response)
+{
+    clarityError rtn = CLARITY_ERROR_UNDEFINED;
+    uint16_t recvSize;
+
+    if (requestSize > bufSize)
+    {
+        return CLARITY_ERROR_RANGE;
+    }
+
+    if ((rtn = sendHttpRequest(addr, buf, bufSize, requestSize, &recvSize))
+             != CLARITY_SUCCESS)
     {
         return rtn;
     }
