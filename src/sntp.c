@@ -114,6 +114,7 @@ static clarityError sntpRequest(char * buf)
     int16_t bytes = -1;
     socklen_t addrlen = sizeof(serverAddr);
     clarityError rtn = CLARITY_ERROR_UNDEFINED;
+    uint32_t timeout = 5000;
 
     memset(&serverAddr, 0, sizeof(serverAddr));
     serverAddr.sin_family = AF_INET;
@@ -134,6 +135,13 @@ static clarityError sntpRequest(char * buf)
 
     else if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
     {
+        rtn = CLARITY_ERROR_CC3000_SOCKET;
+    }
+
+    else if (setsockopt(sockfd, SOL_SOCKET, SOCKOPT_RECV_TIMEOUT,
+                               &timeout, sizeof(timeout)) != 0)
+    {
+        CLAR_PRINT_ERROR();
         rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
 
