@@ -144,8 +144,8 @@ static const char * getHttpVersion(const char * version,
 
 
 static const char * parseResponseStartLine(const char * data,
-                                          uint16_t size,
-                                          clarityHttpResponseInformation * info)
+                                           uint16_t size,
+                                           clarityHttpResponseInformation * info)
 {
     const char * c = data;
     const char * eol = getEndOfLine(data, size);
@@ -596,7 +596,7 @@ const char * httpParseResponse(clarityHttpResponseInformation * info,
         CLAR_PRINT_LINE("parseResponseStartLine() failed.");
         return NULL;
     }
-    return NULL;
+    return dataRtnd;
 }
 
 

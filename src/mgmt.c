@@ -44,10 +44,10 @@ clarityMgmtData mgmtData;
 static Mutex mgmtMutex;
 static Mutex * cc3000Mtx;
 
-static WORKING_AREA(connectivityMonThdWorkingArea, 128);
+static WORKING_AREA(connectivityMonThdWorkingArea, 256);
 static Thread * connectivityMonThd = NULL;
 
-static WORKING_AREA(responseMonThdWorkingArea, 128);
+static WORKING_AREA(responseMonThdWorkingArea, 256);
 static Thread * responseMonThd= NULL;
 
 static clarityUnresponsiveCallback unresponsiveCb;
@@ -56,9 +56,12 @@ static clarityUnresponsiveCallback unresponsiveCb;
 static clarityError connectToWifi(void)
 {
     int32_t wlanRtn;
-    uint32_t loopIterations = 10;
+    uint8_t loopIterations = 10;
+    uint8_t presentCount = 0;
 
     clarityCC3000ApiLck();
+
+    memset((void*)&cc3000AsyncData, 0, sizeof(cc3000AsyncData));
 
     if (mgmtData.ap->secType == WLAN_SEC_UNSEC)
     {
@@ -77,16 +80,26 @@ static clarityError connectToWifi(void)
                                strnlen(mgmtData.ap->password, CLARITY_MAX_AP_STR_LEN));
     }
 
-    while(cc3000AsyncData.connected != true && 
-          cc3000AsyncData.dhcp.present != true)
+    while (presentCount != 3)
     {
-        chThdSleep(MS2ST(500));
+        if (cc3000AsyncData.connected != true && 
+            cc3000AsyncData.dhcp.present != true)
+        {
+            presentCount = 0;
+        }
+
+        else 
+        {
+            presentCount++;
+        }
 
         if (loopIterations-- == 0)
         {
             wlanRtn = 1;
             break;
         }
+
+        chThdSleep(MS2ST(500));
     }
 
     clarityCC3000ApiUnlck();
@@ -109,7 +122,7 @@ static clarityError clarityMgmtCheckNeedForConnectivty(void)
         mgmtData.activeProcesses != 0)
     {
         CLAR_PRINT_ERROR();
-         rtn = connectToWifi();
+        rtn = connectToWifi();
     }
     chMtxUnlock();
 

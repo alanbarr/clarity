@@ -41,8 +41,8 @@
 #define HTTP_VERSION_LEN                8   /* "HTTP/X.X" */
                                         /* "GET / " VERSION \r\n */
 #define HTTP_REQ_START_LINE_MIN_LEN     (6 + HTTP_VERSION_LEN)
-/* TODO Assuming " 200 OK\r\n" following http */
-#define HTTP_RES_START_LINE_MIN_LEN     (9 + HTTP_VERSION_LEN)
+/* TODO Assuming " 200 OK" following http */
+#define HTTP_RES_START_LINE_MIN_LEN     (7 + HTTP_VERSION_LEN)
 
 #define HTTP_SPACE_LEN                  1   /* ' ' */
 

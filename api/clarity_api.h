@@ -201,7 +201,7 @@ clarityError clarityHttpBuildResponseTextPlain(char * clarityBuf,
                                                const char * message,
                                                const char * bodyString);
 /* HTTP Client */
-clarityError claritySendHttpRequest(clarityAddressInformation * addr,
+clarityError claritySendHttpRequest(clarityTransportInformation * transport,
                                     char * buf,
                                     uint16_t bufSize,
                                     uint16_t requestSize,

@@ -29,8 +29,6 @@
 #include "socket.h"
 #include <string.h>
 
-#define HTTP_PORT 80
-
 static clarityError convertAddressInfoToNetworkIp(clarityAddressInformation * addrInfo,
                                                   uint32_t * ip)
 {
@@ -65,7 +63,7 @@ static clarityError convertAddressInfoToNetworkIp(clarityAddressInformation * ad
     return rtn;
 }
 
-static clarityError sendHttpRequest(clarityAddressInformation * addrInfo,
+static clarityError sendHttpRequest(clarityTransportInformation * transport,
                                     char * buf,
                                     uint16_t bufSize,
                                     uint16_t reqSize,
@@ -77,14 +75,15 @@ static clarityError sendHttpRequest(clarityAddressInformation * addrInfo,
     int32_t recvBytes;
 
     saddr.sin_family = AF_INET;
-    saddr.sin_port = htons(HTTP_PORT);
+    saddr.sin_port = htons(transport->port);
 
     if ((rtn = clarityMgmtRegisterProcessStarted()) != CLARITY_SUCCESS)
     {
         return rtn;
     }
 
-    else if ((rtn = convertAddressInfoToNetworkIp(addrInfo, &(saddr.sin_addr.s_addr)))
+    else if ((rtn = convertAddressInfoToNetworkIp(&(transport->addr), 
+                                                  &(saddr.sin_addr.s_addr)))
                   != CLARITY_SUCCESS)
     {
         return rtn;
@@ -94,19 +93,24 @@ static clarityError sendHttpRequest(clarityAddressInformation * addrInfo,
 
     if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
     {
+        CLAR_PRINT_ERROR();
         rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
     else if (connect(sockfd, (sockaddr*)&saddr, sizeof(saddr)) == - 1)
     {
+        CLAR_PRINT_ERROR();
         rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
     /* TODO XXX send size - wlan_tx_buffer overflow + partial tx??? */
     else if (send(sockfd, buf, reqSize, 0) != reqSize)
     {
+        CLAR_PRINT_ERROR();
         rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
+    /* TODO recv timeout / non block and make this thread friendlier */
     else if ((recvBytes = recv(sockfd, buf, bufSize, 0)) == -1)
     {
+        CLAR_PRINT_ERROR();
         rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
     else 
@@ -133,7 +137,7 @@ static clarityError sendHttpRequest(clarityAddressInformation * addrInfo,
 # if 0
 /* buf is reused 
  * TODO get addr to a const*/
-clarityError clarityBuildSendHttpRequest(clarityAddressInformation * addr,
+clarityError clarityBuildSendHttpRequest(clarityTransportInformation * transport,
                                          const clarityHttpRequestInformation * request,
                                          char * buf,
                                          uint16_t bufSize,
@@ -154,7 +158,7 @@ clarityError clarityBuildSendHttpRequest(clarityAddressInformation * addr,
         return rtn;
     }
 
-    if ((rtn = sendHttpRequest(addr, buf, bufSize, reqSize, &recvSize)) != CLARITY_SUCCESS)
+    if ((rtn = sendHttpRequest(transport, buf, bufSize, reqSize, &recvSize)) != CLARITY_SUCCESS)
     {
         return rtn;
     }
@@ -171,7 +175,7 @@ clarityError clarityBuildSendHttpRequest(clarityAddressInformation * addr,
 
 /* buf is reused 
  * TODO get addr to a const*/
-clarityError claritySendHttpRequest(clarityAddressInformation * addr,
+clarityError claritySendHttpRequest(clarityTransportInformation * transport,
                                     char * buf,
                                     uint16_t bufSize,
                                     uint16_t requestSize,
@@ -180,19 +184,29 @@ clarityError claritySendHttpRequest(clarityAddressInformation * addr,
     clarityError rtn = CLARITY_ERROR_UNDEFINED;
     uint16_t recvSize;
 
+    if (transport->type != CLARITY_TRANSPORT_TCP)
+    {
+        CLAR_PRINT_ERROR();
+        return CLARITY_ERROR_UNDEFINED;
+        /* XXX */
+    }
+
     if (requestSize > bufSize)
     {
+        CLAR_PRINT_ERROR();
         return CLARITY_ERROR_RANGE;
     }
 
-    if ((rtn = sendHttpRequest(addr, buf, bufSize, requestSize, &recvSize))
+    if ((rtn = sendHttpRequest(transport, buf, bufSize, requestSize, &recvSize))
              != CLARITY_SUCCESS)
     {
+        CLAR_PRINT_ERROR();
         return rtn;
     }
 
     if (httpParseResponse(response, buf, recvSize) == NULL)
     {
+        CLAR_PRINT_ERROR();
         rtn = CLARITY_ERROR_REMOTE_RESPONSE;
         return rtn;
     }
