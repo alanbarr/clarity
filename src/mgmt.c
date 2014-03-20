@@ -152,6 +152,11 @@ static clarityError clarityMgmtAttemptActivate(void)
 {
     clarityError rtn = CLARITY_ERROR_UNDEFINED;
 
+    if (mgmtData.active == true)
+    {
+        return CLARITY_SUCCESS;
+    }
+
     clarityCC3000ApiLck();
     wlan_start(0);       
     clarityCC3000ApiUnlck();
