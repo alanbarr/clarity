@@ -96,23 +96,27 @@ static clarityError sendHttpRequest(clarityTransportInformation * transport,
         CLAR_PRINT_ERROR();
         rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
+
     else if (connect(sockfd, (sockaddr*)&saddr, sizeof(saddr)) == - 1)
     {
         CLAR_PRINT_ERROR();
         rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
+
     /* TODO XXX send size - wlan_tx_buffer overflow + partial tx??? */
     else if (send(sockfd, buf, reqSize, 0) != reqSize)
     {
         CLAR_PRINT_ERROR();
         rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
+
     /* TODO recv timeout / non block and make this thread friendlier */
     else if ((recvBytes = recv(sockfd, buf, bufSize, 0)) == -1)
     {
         CLAR_PRINT_ERROR();
         rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
+
     else 
     {
         *recvSize = recvBytes;

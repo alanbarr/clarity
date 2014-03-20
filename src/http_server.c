@@ -53,15 +53,11 @@ static msg_t cc3000HttpServerThd(void * arg)
     
     (void)arg;
 
-    while (1)
+    while (chThdShouldTerminate() == FALSE)
     {
+        uint32_t timeout = 5000; /* ms */
         CLAR_PRINT("Server: top of while 1", NULL);
 
-        if (chThdShouldTerminate() == TRUE)
-        {
-            break;
-        }
- 
         memset(&acceptedAddr, 0, sizeof(acceptedAddr));
         memset(rxBuf, 0, sizeof(rxBuf));
 
@@ -71,23 +67,37 @@ static msg_t cc3000HttpServerThd(void * arg)
             if ((accepted.socket = accept(serverSocket, &acceptedAddr,
                                           &acceptedAddrLen)) < 0)
             {
+
+                clarityCC3000ApiUnlck();
                 if (accepted.socket == -1)
                 {
                     CLAR_PRINT_ERROR();
                 }
                 else
                 {
-                    clarityCC3000ApiUnlck();
                     chThdSleep(MS2ST(500));
                 }
             }
 
             else
             {
+                if (setsockopt(accepted.socket, SOL_SOCKET, SOCKOPT_RECV_TIMEOUT,
+                               &timeout, sizeof(timeout)) != 0)
+                {
+                    CLAR_PRINT_ERROR();
+                }
+
+                clarityCC3000ApiUnlck();
                 break;
             }
         }
-        
+  
+        if (chThdShouldTerminate())
+        {
+            break;
+        }
+
+        clarityCC3000ApiLck();
         if ((rxBytes = recv(accepted.socket, rxBuf, sizeof(rxBuf), 0)) == -1)
         {
             CLAR_PRINT_ERROR();
@@ -106,13 +116,15 @@ static msg_t cc3000HttpServerThd(void * arg)
             }
         }
  
-        clarityCC3000ApiLck();
-        if (closesocket(accepted.socket) == -1)
+        if (accepted.socket > 0)
         {
-            CLAR_PRINT_ERROR();
+            clarityCC3000ApiLck();
+            if (closesocket(accepted.socket) == -1)
+            {
+                CLAR_PRINT_ERROR();
+            }
+            clarityCC3000ApiUnlck();
         }
-        clarityCC3000ApiUnlck();
-
         chThdSleep(MS2ST(500));
     }
 
@@ -169,6 +181,7 @@ clarityError clarityHttpServerStart(clarityHttpServerInformation * control)
         {
             CLAR_PRINT_ERROR();
         }
+
         return CLARITY_ERROR_UNDEFINED;
     }
 
