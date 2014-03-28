@@ -64,6 +64,7 @@ static clarityError convertAddressInfoToNetworkIp(clarityAddressInformation * ad
 }
 
 static clarityError sendHttpRequest(clarityTransportInformation * transport,
+                                    clarityHttpPersistant * persistant,
                                     char * buf,
                                     uint16_t bufSize,
                                     uint16_t reqSize,
@@ -91,18 +92,29 @@ static clarityError sendHttpRequest(clarityTransportInformation * transport,
 
     clarityCC3000ApiLck();
 
-    if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
+    if (persistant == NULL || persistant->connected == false) /* XXX */
     {
-        CLAR_PRINT_ERROR();
-        rtn = CLARITY_ERROR_CC3000_SOCKET;
+        if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
+        {
+            CLAR_PRINT_ERROR();
+            rtn = CLARITY_ERROR_CC3000_SOCKET;
+        }
+
+        else if (connect(sockfd, (sockaddr*)&saddr, sizeof(saddr)) == - 1)
+        {
+            CLAR_PRINT_ERROR();
+            rtn = CLARITY_ERROR_CC3000_SOCKET;
+        }
+        else if (persistant != NULL)
+        {
+            persistant->connected = true;
+        }
     }
 
-    else if (connect(sockfd, (sockaddr*)&saddr, sizeof(saddr)) == - 1)
+    if (rtn == CLARITY_ERROR_CC3000_SOCKET)
     {
-        CLAR_PRINT_ERROR();
-        rtn = CLARITY_ERROR_CC3000_SOCKET;
-    }
 
+    }
     /* TODO XXX send size - wlan_tx_buffer overflow + partial tx??? */
     else if (send(sockfd, buf, reqSize, 0) != reqSize)
     {
@@ -124,15 +136,36 @@ static clarityError sendHttpRequest(clarityTransportInformation * transport,
 
     if (sockfd != -1)
     {
-        if (closesocket(sockfd) != 0)
+        if (persistant != NULL)
         {
-            rtn = CLARITY_ERROR_CC3000_SOCKET;
+            if (persistant->connected == false)
+            {
+                persistant->connected = true;
+                persistant->socket = sockfd;
+            }
+
+        }
+        if (persistant == NULL || persistant->closeOnComplete == true)
+        {
+            if (closesocket(sockfd) != 0)
+            {
+                CLAR_PRINT_ERROR();
+                rtn = CLARITY_ERROR_CC3000_SOCKET;
+            }
+            if (persistant != NULL)
+            {
+                persistant->connected=false;
+                persistant->socket = -1;
+            }
         }
     }
 
     clarityCC3000ApiUnlck();
 
-    clarityMgmtRegisterProcessFinished();
+    if (persistant == NULL || persistant->closeOnComplete == true)
+    {
+        clarityMgmtRegisterProcessFinished();
+    }
 
     return rtn;
 }
@@ -177,9 +210,11 @@ clarityError clarityBuildSendHttpRequest(clarityTransportInformation * transport
 }
 #endif
 
+
 /* buf is reused 
  * TODO get addr to a const*/
 clarityError claritySendHttpRequest(clarityTransportInformation * transport,
+                                    clarityHttpPersistant * persistant,
                                     char * buf,
                                     uint16_t bufSize,
                                     uint16_t requestSize,
@@ -201,7 +236,7 @@ clarityError claritySendHttpRequest(clarityTransportInformation * transport,
         return CLARITY_ERROR_RANGE;
     }
 
-    if ((rtn = sendHttpRequest(transport, buf, bufSize, requestSize, &recvSize))
+    if ((rtn = sendHttpRequest(transport, persistant, buf, bufSize, requestSize, &recvSize))
              != CLARITY_SUCCESS)
     {
         CLAR_PRINT_ERROR();
@@ -217,6 +252,5 @@ clarityError claritySendHttpRequest(clarityTransportInformation * transport,
 
     return rtn;
 }
-
 
 

@@ -213,7 +213,16 @@ clarityError clarityHttpBuildResponseTextPlain(char * clarityBuf,
                                                const char * message,
                                                const char * bodyString);
 /* HTTP Client */
+typedef struct {
+    bool closeOnComplete;   /* Close persistant connection after response obtained */
+    /* Private */
+    bool connected;       /* connection established */  
+    int32_t socket;         /* open socket */
+}
+clarityHttpPersistant;
+
 clarityError claritySendHttpRequest(clarityTransportInformation * transport,
+                                    clarityHttpPersistant * persistant,
                                     char * buf,
                                     uint16_t bufSize,
                                     uint16_t requestSize,
