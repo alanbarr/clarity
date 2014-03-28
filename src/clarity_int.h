@@ -40,11 +40,34 @@ const char * httpRequestProcess(clarityHttpServerInformation * control,
                                 const char * data, uint16_t size);
 const char * httpParseRequest(clarityHttpRequestInformation * info,
                               const char * data, const uint16_t size);
-int32_t httpBuildRequestTextPlain(const clarityHttpRequestInformation * http,
-                                  char * txBuf,
-                                  uint16_t txBufSize);
+uint16_t httpBuildRequestTextPlain(const clarityHttpRequestInformation * http,
+                                   char * txBuf,
+                                   uint16_t txBufSize);
 
 const char * httpParseResponse(clarityHttpResponseInformation * info,
                                const char * data,
                                uint16_t size);
+
+#if !defined(CLARITY_PRINT_MESSAGES) || CLARITY_PRINT_MESSAGES == FALSE
+    #define CLAR_PRINT_ERROR() asdasd
+    #define CLAR_PRINT(...) 
+    #define CLAR_PRINT_LINE(STR) 
+    #define CLAR_PRINT_LINE_ARGS(...) 
+#else
+extern clarityPrintCb clarityPrint;
+    #define CLAR_PRINT_ERROR() \
+        clarityPrint("(%s:%d) ERROR.\r\n", __FILE__, __LINE__)
+
+    #define CLAR_PRINT(STR, ...) \
+        clarityPrint(STR, __VA_ARGS__)
+    
+    #define CLAR_PRINT_LINE(STR) \
+        clarityPrint("(%s:%d) " STR "\r\n", __FILE__, __LINE__)
+    
+    #define CLAR_PRINT_LINE_ARGS(STR, ...) \
+        clarityPrint("(%s:%d): " STR "\r\n", __FILE__, __LINE__, __VA_ARGS__)
+
+#endif
+
+
 #endif /* __CLARITY_INT_H__ */

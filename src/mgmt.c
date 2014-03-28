@@ -26,10 +26,11 @@
 
 #include <string.h>
 #include "clarity_api.h"
+#include "clarity_int.h"
 #include "cc3000_chibios_api.h"
 
 #define CC3000_MUTEX_LOCKUP_S      300
-#define CC3000_MUTEX_POLL_TIME_MS  100
+#define CC3000_MUTEX_POLL_TIME_MS  500
 #define CC3000_MUTEX_POLL_COUNT    (CC3000_MUTEX_LOCKUP_S * 1000/    \
                                     CC3000_MUTEX_POLL_TIME_MS)
 
@@ -52,7 +53,12 @@ static Thread * responseMonThd= NULL;
 
 static clarityUnresponsiveCallback unresponsiveCb;
 
-/* must already be powered on */
+#if defined(CLARITY_PRINT_MESSAGES) && CLARITY_PRINT_MESSAGES == TRUE
+clarityPrintCb clarityPrint;
+#endif
+
+/* must already be powered on.
+ * MGMT LOCK/UNLOCK NEEDS CALLED EXTERNALLY */
 static clarityError connectToWifi(void)
 {
     int32_t wlanRtn;
@@ -63,6 +69,7 @@ static clarityError connectToWifi(void)
 
     memset((void*)&cc3000AsyncData, 0, sizeof(cc3000AsyncData));
 
+    CLAR_PRINT_LINE("about to  call wlan_connect()");
     if (mgmtData.ap->secType == WLAN_SEC_UNSEC)
     {
         wlanRtn = wlan_connect(mgmtData.ap->secType,
@@ -79,29 +86,38 @@ static clarityError connectToWifi(void)
                                (unsigned char*)mgmtData.ap->password,
                                strnlen(mgmtData.ap->password, CLARITY_MAX_AP_STR_LEN));
     }
+    CLAR_PRINT_LINE("called wlan_connect()");
 
-    while (presentCount != 3)
+    if (wlanRtn != 0)
     {
-        if (cc3000AsyncData.connected != true && 
-            cc3000AsyncData.dhcp.present != true)
-        {
-            presentCount = 0;
-        }
-
-        else 
-        {
-            presentCount++;
-        }
-
-        if (loopIterations-- == 0)
-        {
-            wlanRtn = 1;
-            break;
-        }
-
-        chThdSleep(MS2ST(500));
+        CLAR_PRINT_LINE("wlan_connect() returned non zero.");
     }
 
+    else
+    {
+        while (presentCount != 3)
+        {
+            if (cc3000AsyncData.connected != true || 
+                cc3000AsyncData.dhcp.present != true)
+            {
+                presentCount = 0;
+            }
+
+            else 
+            {
+                presentCount++;
+            }
+
+            if (loopIterations-- == 0)
+            {
+                wlanRtn = 1;
+                CLAR_PRINT_LINE("Breaking!");
+                break;
+            }
+
+            chThdSleep(MS2ST(500));
+        }
+    }
     clarityCC3000ApiUnlck();
 
     if (wlanRtn == 0)
@@ -148,9 +164,11 @@ static clarityError clarityMgmtAttemptPowerDown(void)
     return CLARITY_SUCCESS;
 }
 
+/* mgmt mutex MUST be locked by caller */
 static clarityError clarityMgmtAttemptActivate(void)
 {
     clarityError rtn = CLARITY_ERROR_UNDEFINED;
+
 
     if (mgmtData.active == true)
     {
@@ -161,20 +179,17 @@ static clarityError clarityMgmtAttemptActivate(void)
     wlan_start(0);       
     clarityCC3000ApiUnlck();
 
-    chMtxLock(&mgmtMutex);
     mgmtData.active = true;
-    chMtxUnlock();
 
     if ((rtn = connectToWifi()) != CLARITY_SUCCESS)
     {
-        chMtxLock(&mgmtMutex);
         mgmtData.active = false;
-        chMtxUnlock();
- 
         clarityCC3000ApiLck();
         wlan_stop();       
         clarityCC3000ApiUnlck();
+        CLAR_PRINT_ERROR();
     }
+
     return rtn;
 }
 
@@ -184,14 +199,14 @@ clarityError clarityMgmtRegisterProcessStarted(void)
 
     chMtxLock(&mgmtMutex);
     mgmtData.activeProcesses++;
-    chMtxUnlock();
 
     if ((rtn = clarityMgmtAttemptActivate()) != CLARITY_SUCCESS)
     {
-        chMtxLock(&mgmtMutex);
+        CLAR_PRINT_ERROR();
         mgmtData.activeProcesses--;
-        chMtxUnlock();
     }
+
+    chMtxUnlock();
     return rtn;
 }
 
@@ -287,7 +302,7 @@ static clarityError clarityMgmtInit(clarityAccessPointInformation * apInfo,
         unresponsiveCb = cb;
         responseMonThd = chThdCreateStatic(responseMonThdWorkingArea,
                                 sizeof(responseMonThdWorkingArea),
-                                NORMALPRIO + 1,
+                                HIGHPRIO-1,
                                 clarityMgmtResponseMonitoringThd,          
                                 NULL);       
     }
@@ -335,6 +350,7 @@ void clarityCC3000ApiUnlck(void)
 }
 
 
+#if CLARITY_PRINT_MESSAGES == FALSE
 clarityError clarityInit(Mutex * cc3000ApiMtx,
                          clarityUnresponsiveCallback cb,
                          clarityAccessPointInformation * accessPointConnection)
@@ -342,6 +358,18 @@ clarityError clarityInit(Mutex * cc3000ApiMtx,
     cc3000Mtx = cc3000ApiMtx;
     return clarityMgmtInit(accessPointConnection, cb);
 }
+#else
+
+clarityError clarityInit(Mutex * cc3000ApiMtx,
+                         clarityUnresponsiveCallback cb,
+                         clarityAccessPointInformation * accessPointConnection,
+                         clarityPrintCb printCb)
+{
+    cc3000Mtx = cc3000ApiMtx;
+    clarityPrint = printCb;
+    return clarityMgmtInit(accessPointConnection, cb);
+}
+#endif
 
 clarityError clarityShutdown(void)
 {

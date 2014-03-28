@@ -56,7 +56,7 @@ static msg_t cc3000HttpServerThd(void * arg)
     while (chThdShouldTerminate() == FALSE)
     {
         uint32_t timeout = 5000; /* ms */
-        CLAR_PRINT("Server: top of while 1", NULL);
+        CLAR_PRINT_LINE("Server: top of while 1");
 
         memset(&acceptedAddr, 0, sizeof(acceptedAddr));
         memset(rxBuf, 0, sizeof(rxBuf));
@@ -75,7 +75,7 @@ static msg_t cc3000HttpServerThd(void * arg)
                 }
                 else
                 {
-                    chThdSleep(MS2ST(500));
+                    chThdSleep(MS2ST(1000));
                 }
             }
 
@@ -125,7 +125,7 @@ static msg_t cc3000HttpServerThd(void * arg)
             }
             clarityCC3000ApiUnlck();
         }
-        chThdSleep(MS2ST(500));
+        chThdSleep(MS2ST(1000));
     }
 
     clarityCC3000ApiLck();

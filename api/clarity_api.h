@@ -37,6 +37,8 @@
 
 #define CLARITY_MAX_HEADERS                 10  /* Maximum stored headers */
 
+#define CLARITY_PRINT_MESSAGES              TRUE
+
 /* TODO should be here? */
 #define CLARITY_MAX_CONTENT_LENGTH_DIGITS   6   /* Max number of characters in string + NULL */
 
@@ -185,9 +187,19 @@ typedef struct {
 /* Initialisation */
 typedef void (*clarityUnresponsiveCallback)(void);
 
+#if !defined(CLARITY_PRINT_MESSAGES) || CLARITY_PRINT_MESSAGES == FALSE
 clarityError clarityInit(Mutex * cc3000ApiMtx,
                          clarityUnresponsiveCallback cb,
                          clarityAccessPointInformation * accessPointConnection);
+#else
+typedef void (*clarityPrintCb)(const char * fmt, ...);
+
+clarityError clarityInit(Mutex * cc3000ApiMtx,
+                         clarityUnresponsiveCallback cb,
+                         clarityAccessPointInformation * accessPointConnection,
+                         clarityPrintCb printCb);
+#endif
+
 clarityError clarityShutdown(void);
 
 /* HTTP Server */
@@ -238,29 +250,6 @@ clarityError clarityTimeIncrement(clarityTimeDate * clarTD, uint32_t seconds);
 /* CC3000 API Mutex Protection */
 void clarityCC3000ApiLck(void);
 void clarityCC3000ApiUnlck(void);
-
-
-#define PRINT_MESSAGES              true
-
-#if defined(CLAR_PRINT_MESSAGES) && CLAR_PRINT_MESSAGES == true  
-
-    #define CLAR_PRINT_ERROR() \
-        printf("(%s:%d) ERROR.\r\n", __FILE__, __LINE__)
-
-    #define CLAR_PRINT(STR, ...) \
-        printf(STR, __VA_ARGS__)
-    
-    #define CLAR_PRINT_LINE(STR) \
-        printf("(%s:%d) " STR "\r\n", __FILE__, __LINE__)
-    
-    #define CLAR_PRINT_LINE_ARGS(STR, ...) \
-        printf("(%s:%d): " STR "\r\n", __FILE__, __LINE__, __VA_ARGS__)
-#else
-    #define CLAR_PRINT_ERROR()
-    #define CLAR_PRINT(...) 
-    #define CLAR_PRINT_LINE(STR) 
-    #define CLAR_PRINT_LINE_ARGS(...) 
-#endif
 
 
 #endif /* __CLARITY_API__ */

@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <limits.h>
 #include "clarity_api.h"
+#include "clarity_int.h"
 #include "http.h"
 
 #ifdef CLARITY_HTTP_METHOD
@@ -82,7 +83,6 @@ static const char * getNextLine(const char * data, uint16_t size)
         return NULL;
     }
     
-    CLAR_PRINT_LINE("Should be returning success.");
     return (dataRtnd += HTTP_EOL_LEN);
 }
 
@@ -224,7 +224,6 @@ static const char * parseHeaders(const char * data,
     const char * eol = getEndOfLine(data,size);
     uint8_t headersIndex = 0;
 
-    CLAR_PRINT_LINE_ARGS("IN %s.", __FUNCTION__);
     if (eol == NULL)
     {
         CLAR_PRINT_LINE("Couldn't find EOL");
@@ -357,10 +356,6 @@ static const char * parseHeaders(const char * data,
             info->headers[headersIndex] = header;
             headersIndex++;
         }
-
-        CLAR_PRINT_LINE_ARGS("ALAN DEBUG. Going to try to grab next line."
-                        "dataStart: %p size: %d eol: %p dataEnd %p", dataStart,
-                        size, eol, dataStart + size);
 
 #if 0
         /*  TODO problem here. Need to identify when we hit CRLF seperating 
