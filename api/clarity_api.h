@@ -56,6 +56,7 @@
     CLARITY_ERROR(CLARITY_ERROR_REMOTE_RESPONSE)    \
     CLARITY_ERROR(CLARITY_ERROR_CC3000_WLAN)        \
     CLARITY_ERROR(CLARITY_ERROR_CC3000_SOCKET)      \
+    CLARITY_ERROR(CLARITY_ERROR_CC3000_NETAPP)      \
     CLARITY_ERROR(CLARITY_ERROR_BUFFER_SIZE)        \
     CLARITY_ERROR(CLARITY_ERROR_RANGE)              \
     CLARITY_ERROR(CLARITY_ERROR_STATE)
@@ -173,6 +174,15 @@ typedef struct {
 #endif
 
 typedef struct {
+    bool isStatic;
+    uint32_t ip;
+    uint32_t subnet;
+    uint32_t gateway;
+    uint32_t dns;
+} clarityDeviceIpInformation;
+
+
+typedef struct {
     /* TODO smart config profiles etc */
 #if 0
     enum connMeth;
@@ -180,6 +190,7 @@ typedef struct {
     char name[CLARITY_MAX_AP_STR_LEN];
     uint8_t secType;
     char password[CLARITY_MAX_AP_STR_LEN];
+    clarityDeviceIpInformation deviceIp;
 } clarityAccessPointInformation;
 
 
@@ -202,6 +213,12 @@ clarityError clarityInit(Mutex * cc3000ApiMtx,
 
 clarityError clarityShutdown(void);
 
+/* Mgmt */
+void clarityCC3000ApiLock(void);
+void clarityCC3000ApiUnlock(void);
+clarityError clarityRegisterProcessStarted(void);
+clarityError clarityRegisterProcessFinished(void);
+
 /* HTTP Server */
 clarityError clarityHttpServerStart(clarityHttpServerInformation * control);
 clarityError clarityHttpServerStop(void);
@@ -221,12 +238,19 @@ typedef struct {
 }
 clarityHttpPersistant;
 
-clarityError claritySendHttpRequest(clarityTransportInformation * transport,
+clarityError clarityHttpSendRequest(clarityTransportInformation * transport,
                                     clarityHttpPersistant * persistant,
                                     char * buf,
                                     uint16_t bufSize,
                                     uint16_t requestSize,
                                     clarityHttpResponseInformation * response);
+
+clarityError clarityHttpBuildPost(char * buf, uint16_t bufSize,
+                                  const char * device,
+                                  const char * resource,
+                                  const char * content, 
+                                  clarityHttpPersistant * persistant);
+
 /* SNTP Client */
 typedef struct {
     uint8_t hour;   /* 24 hour fmt */
@@ -256,9 +280,6 @@ clarityError clarityTimeToUnix(clarityTimeDate * clarTD, time_t * unix);
 clarityError clarityTimeFromSntp(clarityTimeDate * clarTD, uint32_t sntp);
 clarityError clarityTimeIncrement(clarityTimeDate * clarTD, uint32_t seconds);
 
-/* CC3000 API Mutex Protection */
-void clarityCC3000ApiLck(void);
-void clarityCC3000ApiUnlck(void);
 
 
 #endif /* __CLARITY_API__ */

@@ -63,12 +63,12 @@ static msg_t cc3000HttpServerThd(void * arg)
 
         while (chThdShouldTerminate() == FALSE)
         {
-            clarityCC3000ApiLck();
+            clarityCC3000ApiLock();
             if ((accepted.socket = accept(serverSocket, &acceptedAddr,
                                           &acceptedAddrLen)) < 0)
             {
 
-                clarityCC3000ApiUnlck();
+                clarityCC3000ApiUnlock();
                 if (accepted.socket == -1)
                 {
                     CLAR_PRINT_ERROR();
@@ -87,7 +87,7 @@ static msg_t cc3000HttpServerThd(void * arg)
                     CLAR_PRINT_ERROR();
                 }
 
-                clarityCC3000ApiUnlck();
+                clarityCC3000ApiUnlock();
                 break;
             }
         }
@@ -97,13 +97,13 @@ static msg_t cc3000HttpServerThd(void * arg)
             break;
         }
 
-        clarityCC3000ApiLck();
+        clarityCC3000ApiLock();
         if ((rxBytes = recv(accepted.socket, rxBuf, sizeof(rxBuf), 0)) == -1)
         {
             CLAR_PRINT_ERROR();
         }
 
-        clarityCC3000ApiUnlck();
+        clarityCC3000ApiUnlock();
 
         if (rxBytes > 0)
         {
@@ -118,24 +118,24 @@ static msg_t cc3000HttpServerThd(void * arg)
  
         if (accepted.socket > 0)
         {
-            clarityCC3000ApiLck();
+            clarityCC3000ApiLock();
             if (closesocket(accepted.socket) == -1)
             {
                 CLAR_PRINT_ERROR();
             }
-            clarityCC3000ApiUnlck();
+            clarityCC3000ApiUnlock();
         }
         chThdSleep(MS2ST(1000));
     }
 
-    clarityCC3000ApiLck();
+    clarityCC3000ApiLock();
     if (closesocket(serverSocket) == -1)
     {
         CLAR_PRINT_ERROR();
     }
-    clarityCC3000ApiUnlck();
+    clarityCC3000ApiUnlock();
  
-    if (clarityMgmtRegisterProcessFinished() != CLARITY_SUCCESS)
+    if (clarityRegisterProcessFinished() != CLARITY_SUCCESS)
     {
         CLAR_PRINT_ERROR();
     }
@@ -166,7 +166,7 @@ clarityError clarityHttpServerStart(clarityHttpServerInformation * control)
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(HTTP_PORT);
 
-    if ((rtn = clarityMgmtRegisterProcessStarted()) != CLARITY_SUCCESS)
+    if ((rtn = clarityRegisterProcessStarted()) != CLARITY_SUCCESS)
     {
         CLAR_PRINT_ERROR();
         return rtn;
@@ -177,7 +177,7 @@ clarityError clarityHttpServerStart(clarityHttpServerInformation * control)
     {
         CLAR_PRINT("No DHCP info present", NULL);
 
-        if ((clarityMgmtRegisterProcessFinished()) != CLARITY_SUCCESS)
+        if ((clarityRegisterProcessFinished()) != CLARITY_SUCCESS)
         {
             CLAR_PRINT_ERROR();
         }
@@ -185,7 +185,7 @@ clarityError clarityHttpServerStart(clarityHttpServerInformation * control)
         return CLARITY_ERROR_UNDEFINED;
     }
 
-    clarityCC3000ApiLck();
+    clarityCC3000ApiLock();
 
     if ((serverSocket = socket(AF_INET, SOCK_STREAM,
                                IPPROTO_TCP)) == -1)
@@ -216,7 +216,7 @@ clarityError clarityHttpServerStart(clarityHttpServerInformation * control)
         rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
      
-    clarityCC3000ApiUnlck();
+    clarityCC3000ApiUnlock();
 
     if (serverSocket != -1)
     {
@@ -234,9 +234,9 @@ clarityError claritySendInCb(const clarityConnectionInformation * conn,
 {
     int32_t rtn;
 
-    clarityCC3000ApiLck();
+    clarityCC3000ApiLock();
     rtn = send(conn->socket, data, length, 0);
-    clarityCC3000ApiUnlck();
+    clarityCC3000ApiUnlock();
 
     return rtn;
 }

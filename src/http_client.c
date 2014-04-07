@@ -24,10 +24,11 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
+#include <string.h>
 #include "clarity_api.h"
 #include "clarity_int.h"
+#include "http.h"
 #include "socket.h"
-#include <string.h>
 
 static clarityError convertAddressInfoToNetworkIp(clarityAddressInformation * addrInfo,
                                                   uint32_t * ip)
@@ -36,7 +37,7 @@ static clarityError convertAddressInfoToNetworkIp(clarityAddressInformation * ad
 
     if (addrInfo->type == CLARITY_ADDRESS_URL)
     {
-        clarityCC3000ApiLck();
+        clarityCC3000ApiLock();
 
         if (gethostbyname(addrInfo->addr.url,
                           strnlen(addrInfo->addr.url, CLARITY_MAX_URL_LENGTH),
@@ -49,7 +50,7 @@ static clarityError convertAddressInfoToNetworkIp(clarityAddressInformation * ad
             rtn = CLARITY_SUCCESS;
         }
 
-        clarityCC3000ApiUnlck();
+        clarityCC3000ApiUnlock();
     }
     
     else
@@ -78,7 +79,7 @@ static clarityError sendHttpRequest(clarityTransportInformation * transport,
     saddr.sin_family = AF_INET;
     saddr.sin_port = htons(transport->port);
 
-    if ((rtn = clarityMgmtRegisterProcessStarted()) != CLARITY_SUCCESS)
+    if ((rtn = clarityRegisterProcessStarted()) != CLARITY_SUCCESS)
     {
         return rtn;
     }
@@ -90,7 +91,7 @@ static clarityError sendHttpRequest(clarityTransportInformation * transport,
         return rtn;
     }
 
-    clarityCC3000ApiLck();
+    clarityCC3000ApiLock();
 
     if (persistant == NULL || persistant->connected == false) /* XXX */
     {
@@ -160,11 +161,11 @@ static clarityError sendHttpRequest(clarityTransportInformation * transport,
         }
     }
 
-    clarityCC3000ApiUnlck();
+    clarityCC3000ApiUnlock();
 
     if (persistant == NULL || persistant->closeOnComplete == true)
     {
-        clarityMgmtRegisterProcessFinished();
+        clarityRegisterProcessFinished();
     }
 
     return rtn;
@@ -213,7 +214,7 @@ clarityError clarityBuildSendHttpRequest(clarityTransportInformation * transport
 
 /* buf is reused 
  * TODO get addr to a const*/
-clarityError claritySendHttpRequest(clarityTransportInformation * transport,
+clarityError clarityHttpSendRequest(clarityTransportInformation * transport,
                                     clarityHttpPersistant * persistant,
                                     char * buf,
                                     uint16_t bufSize,
@@ -243,6 +244,7 @@ clarityError claritySendHttpRequest(clarityTransportInformation * transport,
         return rtn;
     }
 
+    /* TODO what about continues */
     if (httpParseResponse(response, buf, recvSize) == NULL)
     {
         CLAR_PRINT_ERROR();
@@ -253,4 +255,36 @@ clarityError claritySendHttpRequest(clarityTransportInformation * transport,
     return rtn;
 }
 
+clarityError clarityHttpBuildPost(char * buf, uint16_t bufSize,
+                                  const char * device,   /* null t */
+                                  const char * resource, /* null t */
+                                  const char * content,   /* null t */
+                                  clarityHttpPersistant * persistant)
+{
+    int16_t temp = 0;
+    
+    temp = snprintf(buf, bufSize - temp, "POST %s%s " 
+                                          HTTP_VERSION_STR
+                                          HTTP_EOL_STR, device, resource); 
+    temp += snprintf(buf + temp, bufSize - temp, "Host:" HTTP_EOL_STR); /* hacky hack */
+        
+    if (persistant == NULL || persistant->closeOnComplete == true)
+    {
+        temp = snprintf(buf, bufSize - temp, "Connection: close" HTTP_EOL_STR); 
+    }
 
+    if (content != NULL)
+    {
+        temp += snprintf(buf + temp, bufSize - temp, "Content-Type: text/plain"
+                                                     HTTP_EOL_STR);
+        temp += snprintf(buf + temp, bufSize - temp, "Content-Length: %d"
+                                                     HTTP_EOL_STR, strlen(content));
+        temp += snprintf(buf + temp, bufSize - temp, HTTP_EOL_STR);
+        temp += snprintf(buf + temp, bufSize - temp, "%s", content);
+    }
+    else 
+    {
+        temp += snprintf(buf, bufSize - temp, "%s", content);
+    }
+    return temp;
+}

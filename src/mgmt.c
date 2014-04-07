@@ -29,27 +29,30 @@
 #include "clarity_int.h"
 #include "cc3000_chibios_api.h"
 
-#define CC3000_MUTEX_LOCKUP_S      300
-#define CC3000_MUTEX_POLL_TIME_MS  500
-#define CC3000_MUTEX_POLL_COUNT    (CC3000_MUTEX_LOCKUP_S * 1000/    \
-                                    CC3000_MUTEX_POLL_TIME_MS)
+#define CC3000_MUTEX_LOCKUP_S       60
+#define CC3000_MUTEX_POLL_TIME_MS   500
+#define CC3000_MUTEX_POLL_COUNT     (CC3000_MUTEX_LOCKUP_S * 1000/    \
+                                     CC3000_MUTEX_POLL_TIME_MS)
+
+#define clarityMgmtMtxLock()        chMtxLock(&mgmtData.mutex)
+#define clarityMgmtMtxUnlock()      chMtxUnlock()
 
 typedef struct {
+    Mutex mutex;
     bool active;                /* CC3000 Power */
     uint16_t activeProcesses;   /* Number of running user processes */
     clarityAccessPointInformation * ap;
 } clarityMgmtData;
 
-clarityMgmtData mgmtData;
+static clarityMgmtData mgmtData;
 
-static Mutex mgmtMutex;
 static Mutex * cc3000Mtx;
 
 static WORKING_AREA(connectivityMonThdWorkingArea, 256);
 static Thread * connectivityMonThd = NULL;
 
 static WORKING_AREA(responseMonThdWorkingArea, 256);
-static Thread * responseMonThd= NULL;
+static Thread * responseMonThd = NULL;
 
 static clarityUnresponsiveCallback unresponsiveCb;
 
@@ -65,7 +68,7 @@ static clarityError connectToWifi(void)
     uint8_t loopIterations = 10;
     uint8_t presentCount = 0;
 
-    clarityCC3000ApiLck();
+    clarityCC3000ApiLock();
 
     memset((void*)&cc3000AsyncData, 0, sizeof(cc3000AsyncData));
 
@@ -118,7 +121,7 @@ static clarityError connectToWifi(void)
             chThdSleep(MS2ST(500));
         }
     }
-    clarityCC3000ApiUnlck();
+    clarityCC3000ApiUnlock();
 
     if (wlanRtn == 0)
     {
@@ -133,33 +136,43 @@ static clarityError connectToWifi(void)
 static clarityError clarityMgmtCheckNeedForConnectivty(void)
 {
     clarityError rtn = CLARITY_ERROR_UNDEFINED;
-    chMtxLock(&mgmtMutex);
+    long statusRtn; /*XXX*/
+
+    clarityMgmtMtxLock();
+
     if (cc3000AsyncData.connected == false &&
         mgmtData.activeProcesses != 0)
     {
         CLAR_PRINT_ERROR();
+        if (statusRtn = wlan_ioctl_statusget()) /* XXX */
+        {}
+        CLAR_PRINT_ERROR();
+        CLAR_PRINT_LINE_ARGS("status get: %d", statusRtn);
         rtn = connectToWifi();
     }
-    chMtxUnlock();
+
+    clarityMgmtMtxUnlock();
 
     return rtn;
 }
 
 static clarityError clarityMgmtAttemptPowerDown(void)
 {
-    chMtxLock(&mgmtMutex);
+    clarityMgmtMtxLock();
     if (mgmtData.active == true)
     {
         if (mgmtData.activeProcesses == 0)
         {
-            clarityCC3000ApiLck();
+            clarityCC3000ApiLock();
             wlan_stop();       
-            clarityCC3000ApiUnlck();
+            clarityCC3000ApiUnlock();
+
             mgmtData.active = false;
+            clarityMgmtMtxUnlock();
             /* TODO what can we do about asyncdata shutdown ok??? */
         }
     }
-    chMtxUnlock();
+    clarityMgmtMtxUnlock();
 
     return CLARITY_SUCCESS;
 }
@@ -167,37 +180,62 @@ static clarityError clarityMgmtAttemptPowerDown(void)
 /* mgmt mutex MUST be locked by caller */
 static clarityError clarityMgmtAttemptActivate(void)
 {
-    clarityError rtn = CLARITY_ERROR_UNDEFINED;
-
+    clarityError rtn = CLARITY_SUCCESS;
 
     if (mgmtData.active == true)
     {
         return CLARITY_SUCCESS;
     }
 
-    clarityCC3000ApiLck();
-    wlan_start(0);       
-    clarityCC3000ApiUnlck();
+    if (mgmtData.ap->deviceIp.isStatic == false)
+    {
+        mgmtData.ap->deviceIp.ip = 0;
+        mgmtData.ap->deviceIp.subnet = 0;
+        mgmtData.ap->deviceIp.gateway = 0;
+        mgmtData.ap->deviceIp.dns = 0;
+    }
 
+    clarityCC3000ApiLock();
+    wlan_start(0);       
     mgmtData.active = true;
 
+    if (netapp_dhcp(&(mgmtData.ap->deviceIp.ip),
+                    &(mgmtData.ap->deviceIp.subnet),
+                    &(mgmtData.ap->deviceIp.gateway),
+                    &(mgmtData.ap->deviceIp.dns)) != 0)
+    {
+        CLAR_PRINT_ERROR();
+        rtn = CLARITY_ERROR_CC3000_NETAPP;
+    }
+    clarityCC3000ApiUnlock();
+
+    clarityMgmtMtxLock();
     if ((rtn = connectToWifi()) != CLARITY_SUCCESS)
     {
-        mgmtData.active = false;
-        clarityCC3000ApiLck();
-        wlan_stop();       
-        clarityCC3000ApiUnlck();
         CLAR_PRINT_ERROR();
+    }
+    clarityMgmtMtxUnlock();
+
+    if (rtn != CLARITY_SUCCESS)
+    {
+        clarityCC3000ApiLock();
+        wlan_stop();       
+        clarityCC3000ApiUnlock();
+
+        clarityMgmtMtxLock();
+        mgmtData.active = false;
+        clarityMgmtMtxUnlock();
+
     }
 
     return rtn;
 }
 
-clarityError clarityMgmtRegisterProcessStarted(void)
+clarityError clarityRegisterProcessStarted(void)
 {
     clarityError rtn = CLARITY_ERROR_UNDEFINED;
 
-    chMtxLock(&mgmtMutex);
+    clarityMgmtMtxLock();
     mgmtData.activeProcesses++;
 
     if ((rtn = clarityMgmtAttemptActivate()) != CLARITY_SUCCESS)
@@ -206,20 +244,20 @@ clarityError clarityMgmtRegisterProcessStarted(void)
         mgmtData.activeProcesses--;
     }
 
-    chMtxUnlock();
+    clarityMgmtMtxUnlock();
     return rtn;
 }
 
-clarityError clarityMgmtRegisterProcessFinished(void)
+clarityError clarityRegisterProcessFinished(void)
 {
-    chMtxLock(&mgmtMutex);
+    clarityMgmtMtxLock();
     if (mgmtData.activeProcesses == 0)
     {
-        chMtxUnlock();
+        clarityMgmtMtxUnlock();
         return CLARITY_ERROR_STATE;
     }
     mgmtData.activeProcesses--;
-    chMtxUnlock();
+    clarityMgmtMtxUnlock();
     clarityMgmtAttemptPowerDown();
     return CLARITY_SUCCESS;
 }
@@ -284,13 +322,13 @@ static msg_t clarityMgmtResponseMonitoringThd(void *arg)
 static clarityError clarityMgmtInit(clarityAccessPointInformation * apInfo,
                                     clarityUnresponsiveCallback cb)
 {
-    chMtxInit(&mgmtMutex);
+
     memset(&mgmtData, 0, sizeof(mgmtData));
 
-    chMtxLock(&mgmtMutex);
-    chMtxUnlock();
-
+    clarityMgmtMtxLock();
+    chMtxInit(&mgmtData.mutex);
     mgmtData.ap = apInfo;
+    clarityMgmtMtxUnlock();
 
     connectivityMonThd = chThdCreateStatic(connectivityMonThdWorkingArea,
                                 sizeof(connectivityMonThdWorkingArea),
@@ -319,9 +357,9 @@ static clarityError clarityMgmtShutdown(void)
 
     clarityHttpServerStop();
 
-    chMtxLock(&mgmtMutex);
+    clarityMgmtMtxLock();
     chThdTerminate(connectivityMonThd);
-    chMtxUnlock();
+    clarityMgmtMtxUnlock();
     chThdWait(connectivityMonThd);
 
     if (responseMonThd != NULL)
@@ -333,7 +371,7 @@ static clarityError clarityMgmtShutdown(void)
     return CLARITY_SUCCESS;
 }
 
-void clarityCC3000ApiLck(void)
+void clarityCC3000ApiLock(void)
 { 
     if (cc3000Mtx != NULL)
     {
@@ -341,7 +379,7 @@ void clarityCC3000ApiLck(void)
     }
 }
 
-void clarityCC3000ApiUnlck(void)
+void clarityCC3000ApiUnlock(void)
 {
     if (cc3000Mtx != NULL)
     {

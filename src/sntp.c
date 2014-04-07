@@ -120,12 +120,12 @@ static clarityError sntpRequest(char * buf)
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(SNTP_PORT);
 
-    if ((rtn = clarityMgmtRegisterProcessStarted()) != CLARITY_SUCCESS)
+    if ((rtn = clarityRegisterProcessStarted()) != CLARITY_SUCCESS)
     {
         return rtn;
     }
 
-    clarityCC3000ApiLck();
+    clarityCC3000ApiLock();
     
     if (gethostbyname(SNTP_SERVER, strlen(SNTP_SERVER),
                            &serverAddr.sin_addr.s_addr) < 0) 
@@ -171,8 +171,8 @@ static clarityError sntpRequest(char * buf)
             rtn = CLARITY_ERROR_CC3000_SOCKET;
         }
     }
-    clarityCC3000ApiUnlck();
-    rtn = clarityMgmtRegisterProcessFinished();
+    clarityCC3000ApiUnlock();
+    rtn = clarityRegisterProcessFinished();
     return rtn;
 }
 
