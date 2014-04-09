@@ -122,19 +122,22 @@ static clarityError sntpRequest(char * buf)
 
     if ((rtn = clarityRegisterProcessStarted()) != CLARITY_SUCCESS)
     {
+        CLAR_PRINT_ERROR();
         return rtn;
     }
 
     clarityCC3000ApiLock();
     
     if (gethostbyname(SNTP_SERVER, strlen(SNTP_SERVER),
-                           &serverAddr.sin_addr.s_addr) < 0) 
+                      &serverAddr.sin_addr.s_addr) < 0) 
     {
+        CLAR_PRINT_ERROR();
         rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
 
     else if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
     {
+        CLAR_PRINT_ERROR();
         rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
 
@@ -147,6 +150,7 @@ static clarityError sntpRequest(char * buf)
 
     else if ((serverAddr.sin_addr.s_addr = htonl(serverAddr.sin_addr.s_addr))== 0)
     {
+        CLAR_PRINT_ERROR();
         rtn = CLARITY_ERROR_UNDEFINED;
     }
 
@@ -154,6 +158,7 @@ static clarityError sntpRequest(char * buf)
                              (sockaddr *)&serverAddr, sizeof(sockaddr)))
                     != NTP_PACKET_HEADER_SIZE) 
     {
+        CLAR_PRINT_ERROR();
         rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
     
@@ -161,6 +166,7 @@ static clarityError sntpRequest(char * buf)
                                (sockaddr *)&serverAddr, &addrlen))
                     != NTP_PACKET_HEADER_SIZE)
     {
+        CLAR_PRINT_ERROR();
         rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
 
@@ -168,6 +174,7 @@ static clarityError sntpRequest(char * buf)
     {
         if (closesocket(sockfd) != 0)
         {
+            CLAR_PRINT_ERROR();
             rtn = CLARITY_ERROR_CC3000_SOCKET;
         }
     }
@@ -184,21 +191,25 @@ clarityError clarityGetSntpTime(char * buf, uint16_t bufSize,
 
     if (bufSize < NTP_PACKET_HEADER_SIZE)
     {
+        CLAR_PRINT_ERROR();
         return CLARITY_ERROR_BUFFER_SIZE;
     }
 
     if ((rtn = sntpConstructRequest(buf)) != CLARITY_SUCCESS)
     {
+        CLAR_PRINT_ERROR();
         return rtn;
     }
 
     if ((rtn = sntpRequest(buf)) != CLARITY_SUCCESS)
     {
+        CLAR_PRINT_ERROR();
         return rtn;
     }
 
     if ((rtn = sntpParseTransmitTimestamp(buf, ntpSeconds)) != CLARITY_SUCCESS)
     {
+        CLAR_PRINT_ERROR();
         return rtn;
     }
     

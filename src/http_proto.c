@@ -588,7 +588,7 @@ const char * httpParseResponse(clarityHttpResponseInformation * info,
     const char * dataRtnd = NULL;
     if ((dataRtnd = parseResponseStartLine(data, size, info)) == NULL)
     {
-        CLAR_PRINT_LINE("parseResponseStartLine() failed.");
+        CLAR_PRINT_ERROR();
         return NULL;
     }
     return dataRtnd;

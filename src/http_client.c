@@ -111,6 +111,10 @@ static clarityError sendHttpRequest(clarityTransportInformation * transport,
             persistant->connected = true;
         }
     }
+    else
+    {
+        sockfd = persistant->socket;
+    }
 
     if (rtn == CLARITY_ERROR_CC3000_SOCKET)
     {

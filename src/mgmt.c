@@ -25,9 +25,11 @@
 *******************************************************************************/
 
 #include <string.h>
+#include "cc3000_chibios_api.h"
 #include "clarity_api.h"
 #include "clarity_int.h"
-#include "cc3000_chibios_api.h"
+#include "socket.h"
+#include "wlan.h"
 
 #define CC3000_MUTEX_LOCKUP_S       60
 #define CC3000_MUTEX_POLL_TIME_MS   500
@@ -62,7 +64,7 @@ clarityPrintCb clarityPrint;
 
 /* must already be powered on.
  * MGMT LOCK/UNLOCK NEEDS CALLED EXTERNALLY */
-static clarityError connectToWifi(void)
+static clarityError connectToWifi_mtxext(void)
 {
     int32_t wlanRtn;
     uint8_t loopIterations = 10;
@@ -114,7 +116,9 @@ static clarityError connectToWifi(void)
             if (loopIterations-- == 0)
             {
                 wlanRtn = 1;
-                CLAR_PRINT_LINE("Breaking!");
+                CLAR_PRINT_LINE_ARGS("Connected: %d DHCP Present: %d. Breaking!",
+                                     cc3000AsyncData.connected,
+                                     cc3000AsyncData.dhcp.present);
                 break;
             }
 
@@ -148,7 +152,7 @@ static clarityError clarityMgmtCheckNeedForConnectivty(void)
         {}
         CLAR_PRINT_ERROR();
         CLAR_PRINT_LINE_ARGS("status get: %d", statusRtn);
-        rtn = connectToWifi();
+        rtn = connectToWifi_mtxext();
     }
 
     clarityMgmtMtxUnlock();
@@ -168,7 +172,6 @@ static clarityError clarityMgmtAttemptPowerDown(void)
             clarityCC3000ApiUnlock();
 
             mgmtData.active = false;
-            clarityMgmtMtxUnlock();
             /* TODO what can we do about asyncdata shutdown ok??? */
         }
     }
@@ -178,43 +181,56 @@ static clarityError clarityMgmtAttemptPowerDown(void)
 }
 
 /* mgmt mutex MUST be locked by caller */
-static clarityError clarityMgmtAttemptActivate(void)
+static clarityError clarityMgmtAttemptActivate_mtxext(void)
 {
     clarityError rtn = CLARITY_SUCCESS;
+    uint32_t ip = 0;
+    uint32_t subnet = 0;
+    uint32_t gateway = 0;
+    uint32_t dns = 0;
 
     if (mgmtData.active == true)
     {
         return CLARITY_SUCCESS;
     }
 
-    if (mgmtData.ap->deviceIp.isStatic == false)
+    if (mgmtData.ap->deviceIp.isStatic == true)
     {
-        mgmtData.ap->deviceIp.ip = 0;
-        mgmtData.ap->deviceIp.subnet = 0;
-        mgmtData.ap->deviceIp.gateway = 0;
-        mgmtData.ap->deviceIp.dns = 0;
+#if 1
+        ip = htonl(mgmtData.ap->deviceIp.ip);
+        subnet = htonl(mgmtData.ap->deviceIp.subnet);
+        gateway = htonl(mgmtData.ap->deviceIp.gateway);
+        dns = htonl(mgmtData.ap->deviceIp.dns);
+#else
+        ip = mgmtData.ap->deviceIp.ip;
+        subnet = mgmtData.ap->deviceIp.subnet;
+        gateway = mgmtData.ap->deviceIp.gateway;
+        dns = mgmtData.ap->deviceIp.dns;
+#endif
+
     }
 
     clarityCC3000ApiLock();
     wlan_start(0);       
     mgmtData.active = true;
 
-    if (netapp_dhcp(&(mgmtData.ap->deviceIp.ip),
-                    &(mgmtData.ap->deviceIp.subnet),
-                    &(mgmtData.ap->deviceIp.gateway),
-                    &(mgmtData.ap->deviceIp.dns)) != 0)
+#if 1
+    if (netapp_dhcp(&ip, &subnet, &gateway, &dns) != 0)
     {
         CLAR_PRINT_ERROR();
         rtn = CLARITY_ERROR_CC3000_NETAPP;
     }
+
+    wlan_stop();
+    chThdSleep(MS2ST(200));
+    wlan_start(0);
+#endif
     clarityCC3000ApiUnlock();
 
-    clarityMgmtMtxLock();
-    if ((rtn = connectToWifi()) != CLARITY_SUCCESS)
+    if ((rtn = connectToWifi_mtxext()) != CLARITY_SUCCESS)
     {
         CLAR_PRINT_ERROR();
     }
-    clarityMgmtMtxUnlock();
 
     if (rtn != CLARITY_SUCCESS)
     {
@@ -222,9 +238,7 @@ static clarityError clarityMgmtAttemptActivate(void)
         wlan_stop();       
         clarityCC3000ApiUnlock();
 
-        clarityMgmtMtxLock();
         mgmtData.active = false;
-        clarityMgmtMtxUnlock();
 
     }
 
@@ -238,7 +252,7 @@ clarityError clarityRegisterProcessStarted(void)
     clarityMgmtMtxLock();
     mgmtData.activeProcesses++;
 
-    if ((rtn = clarityMgmtAttemptActivate()) != CLARITY_SUCCESS)
+    if ((rtn = clarityMgmtAttemptActivate_mtxext()) != CLARITY_SUCCESS)
     {
         CLAR_PRINT_ERROR();
         mgmtData.activeProcesses--;
@@ -274,8 +288,10 @@ static msg_t clarityMgmtConnectivityMonitoringThd(void *arg)
     {
         chThdSleep(MS2ST(500));
 
+#if 0
         /* Check for disconnect */
         clarityMgmtCheckNeedForConnectivty();
+#endif
 
 # if 0
         /* Check to see if we can power down */
@@ -324,9 +340,9 @@ static clarityError clarityMgmtInit(clarityAccessPointInformation * apInfo,
 {
 
     memset(&mgmtData, 0, sizeof(mgmtData));
+    chMtxInit(&mgmtData.mutex);
 
     clarityMgmtMtxLock();
-    chMtxInit(&mgmtData.mutex);
     mgmtData.ap = apInfo;
     clarityMgmtMtxUnlock();
 
