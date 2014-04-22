@@ -1,3 +1,5 @@
 * cc3000 recv() doesn't seem to do any internal checking on buffer size. Care needs
   to be taken whenever calling this function, and presumably send().
+  
+* sntp is quick and dirty at the moment. Clean way of getting system clock offset?
 
