@@ -75,11 +75,13 @@ static clarityError sendHttpRequest(clarityTransportInformation * transport,
     int32_t sockfd = -1;
     sockaddr_in saddr;
     int32_t recvBytes;
+    int32_t recvAttempt;
 
     saddr.sin_family = AF_INET;
     saddr.sin_port = htons(transport->port);
 
-    if ((rtn = clarityRegisterProcessStarted()) != CLARITY_SUCCESS)
+    if (persistant != NULL && persistant->connected == false &&
+        ((rtn = clarityRegisterProcessStarted()) != CLARITY_SUCCESS))
     {
         return rtn;
     }
@@ -95,6 +97,8 @@ static clarityError sendHttpRequest(clarityTransportInformation * transport,
 
     if (persistant == NULL || persistant->connected == false) /* XXX */
     {
+        uint32_t timeout = 1000; /* ms */ /* TODO make global */
+
         if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
         {
             CLAR_PRINT_ERROR();
@@ -106,10 +110,16 @@ static clarityError sendHttpRequest(clarityTransportInformation * transport,
             CLAR_PRINT_ERROR();
             rtn = CLARITY_ERROR_CC3000_SOCKET;
         }
+        else if (setsockopt(sockfd, SOL_SOCKET, SOCKOPT_RECV_TIMEOUT,
+                            &timeout, sizeof(timeout)) != 0)
+        {
+            CLAR_PRINT_ERROR();
+        }
         else if (persistant != NULL)
         {
             persistant->connected = true;
         }
+
     }
     else
     {
@@ -120,23 +130,42 @@ static clarityError sendHttpRequest(clarityTransportInformation * transport,
     {
 
     }
+
     /* TODO XXX send size - wlan_tx_buffer overflow + partial tx??? */
     else if (send(sockfd, buf, reqSize, 0) != reqSize)
     {
         CLAR_PRINT_ERROR();
         rtn = CLARITY_ERROR_CC3000_SOCKET;
     }
+    
+    clarityCC3000ApiUnlock();
 
-    /* TODO recv timeout / non block and make this thread friendlier */
-    else if ((recvBytes = recv(sockfd, buf, bufSize, 0)) == -1)
+    /* TODO tidy up. recv non-block ??? */
+    for(recvAttempt=0; recvAttempt<10; recvAttempt++)
+    {
+        clarityCC3000ApiLock();
+        if ((recvBytes = recv(sockfd, buf, bufSize, 0)) == -1)
+        {
+            CLAR_PRINT_ERROR();
+            clarityCC3000ApiUnlock();
+            break;
+        }
+        else if (recvBytes > 0)
+        {
+            clarityCC3000ApiUnlock();
+            break;
+        }
+        clarityCC3000ApiUnlock();
+    }
+
+    if (recvBytes>0)
+    {
+        *recvSize = recvBytes;
+    }
+    else 
     {
         CLAR_PRINT_ERROR();
         rtn = CLARITY_ERROR_CC3000_SOCKET;
-    }
-
-    else 
-    {
-        *recvSize = recvBytes;
     }
 
     if (sockfd != -1)
@@ -152,20 +181,22 @@ static clarityError sendHttpRequest(clarityTransportInformation * transport,
         }
         if (persistant == NULL || persistant->closeOnComplete == true)
         {
+            clarityCC3000ApiLock();
             if (closesocket(sockfd) != 0)
             {
                 CLAR_PRINT_ERROR();
                 rtn = CLARITY_ERROR_CC3000_SOCKET;
             }
+            clarityCC3000ApiUnlock();
+
             if (persistant != NULL)
             {
-                persistant->connected=false;
+                persistant->connected = false;
                 persistant->socket = -1;
             }
         }
     }
 
-    clarityCC3000ApiUnlock();
 
     if (persistant == NULL || persistant->closeOnComplete == true)
     {
@@ -274,7 +305,7 @@ clarityError clarityHttpBuildPost(char * buf, uint16_t bufSize,
         
     if (persistant == NULL || persistant->closeOnComplete == true)
     {
-        temp = snprintf(buf, bufSize - temp, "Connection: close" HTTP_EOL_STR); 
+        temp += snprintf(buf + temp, bufSize - temp, "Connection: close" HTTP_EOL_STR); 
     }
 
     if (content != NULL)
