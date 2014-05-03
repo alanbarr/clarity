@@ -30,6 +30,8 @@
 #include "http.h"
 #include "socket.h"
 
+/* N.B. edits addrInfo 
+ * ip returned in network byte order */
 static clarityError convertAddressInfoToNetworkIp(clarityAddressInformation * addrInfo,
                                                   uint32_t * ip)
 {
@@ -47,6 +49,10 @@ static clarityError convertAddressInfoToNetworkIp(clarityAddressInformation * ad
         }
         else
         {
+            /* XXX edit transport to prevent further lookups */
+            addrInfo->type = CLARITY_ADDRESS_IP;
+            addrInfo->addr.ip = *ip;
+
             rtn = CLARITY_SUCCESS;
         }
 
@@ -63,7 +69,6 @@ static clarityError convertAddressInfoToNetworkIp(clarityAddressInformation * ad
 
     return rtn;
 }
-
 static clarityError sendHttpRequest(clarityTransportInformation * transport,
                                     clarityHttpPersistant * persistant,
                                     char * buf,

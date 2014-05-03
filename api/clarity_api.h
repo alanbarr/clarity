@@ -115,6 +115,8 @@ typedef struct {
 typedef struct {
     clarityHttpVersion version;
     uint16_t code;
+    /*TODO pointer to headers */
+    /*TODO pointer to body */
 } clarityHttpResponseInformation;
 
 typedef struct {
@@ -198,18 +200,12 @@ typedef struct {
 /* Initialisation */
 typedef void (*clarityUnresponsiveCallback)(void);
 
-#if !defined(CLARITY_PRINT_MESSAGES) || CLARITY_PRINT_MESSAGES == FALSE
-clarityError clarityInit(Mutex * cc3000ApiMtx,
-                         clarityUnresponsiveCallback cb,
-                         clarityAccessPointInformation * accessPointConnection);
-#else
 typedef void (*clarityPrintCb)(const char * fmt, ...);
 
 clarityError clarityInit(Mutex * cc3000ApiMtx,
-                         clarityUnresponsiveCallback cb,
+                         clarityUnresponsiveCallback unrespCb,
                          clarityAccessPointInformation * accessPointConnection,
                          clarityPrintCb printCb);
-#endif
 
 clarityError clarityShutdown(void);
 
@@ -222,8 +218,8 @@ clarityError clarityRegisterProcessFinished(void);
 /* HTTP Server */
 clarityError clarityHttpServerStart(clarityHttpServerInformation * control);
 clarityError clarityHttpServerStop(void);
-clarityError claritySendInCb(const clarityConnectionInformation * conn,
-                             const void * data, uint16_t length);
+clarityError clarityHttpServerSendInCb(const clarityConnectionInformation * conn,
+                                       const void * data, uint16_t length); 
 clarityError clarityHttpBuildResponseTextPlain(char * clarityBuf,
                                                uint16_t clarityBufSize,
                                                uint8_t code,
@@ -253,13 +249,13 @@ clarityError clarityHttpBuildPost(char * buf, uint16_t bufSize,
 
 /* SNTP Client */
 typedef struct {
-    uint8_t hour;   /* 24 hour fmt */
+    uint8_t hour;   /* 0 - 23 */
     uint8_t minute; /* 0 - 59 */
     uint8_t second; /* 0 - 59 */
 } clarityTime;
 
 typedef struct {
-    uint8_t year;   /* e.g. 2000 */
+    uint8_t year;   /* 00 - 99 */
     uint8_t month;  /* 1 (Jan) - 12 (Dec) */
     uint8_t date;   /* 1 - 31 */
     uint8_t day;    /* 1 (Mon) - 7 (Sun)*/

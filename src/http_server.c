@@ -229,8 +229,8 @@ clarityError clarityHttpServerStart(clarityHttpServerInformation * control)
     return rtn;
 }
 
-clarityError claritySendInCb(const clarityConnectionInformation * conn,
-                             const void * data, uint16_t length)
+clarityError clarityHttpServerSendInCb(const clarityConnectionInformation * conn,
+                                       const void * data, uint16_t length)
 {
     int32_t rtn;
 

@@ -60,7 +60,7 @@ static Thread * responseMonThd = NULL;
 
 static clarityUnresponsiveCallback unresponsiveCb;
 
-#if defined(CLARITY_PRINT_MESSAGES) && CLARITY_PRINT_MESSAGES == TRUE
+#if CLARITY_PRINT_MESSAGES == TRUE
 clarityPrintCb clarityPrint;
 #endif
 
@@ -149,18 +149,20 @@ static clarityError connectToWifi_mtxext(void)
 static clarityError clarityMgmtCheckNeedForConnectivty(void)
 {
     clarityError rtn = CLARITY_ERROR_UNDEFINED;
-    long statusRtn; /*XXX*/
 
     clarityMgmtMtxLock();
 
     if (cc3000AsyncData.connected == false &&
         mgmtData.activeProcesses != 0)
     {
+#if 0
+        long statusRtn; /*XXX*/
         CLAR_PRINT_ERROR();
         if (statusRtn = wlan_ioctl_statusget()) /* XXX */
         {}
         CLAR_PRINT_ERROR();
         CLAR_PRINT_LINE_ARGS("status get: %d", statusRtn);
+#endif
         rtn = connectToWifi_mtxext();
     }
 
@@ -194,31 +196,28 @@ static clarityError clarityMgmtAttemptPowerDown(void)
 static clarityError clarityMgmtAttemptActivate_mtxext(void)
 {
     clarityError rtn = CLARITY_SUCCESS;
+#if 0
     uint32_t ip = 0;
     uint32_t subnet = 0;
     uint32_t gateway = 0;
     uint32_t dns = 0;
+#endif
 
     if (mgmtData.active == true)
     {
         return CLARITY_SUCCESS;
     }
 
+
+#if 0
     if (mgmtData.ap->deviceIp.isStatic == true)
     {
-#if 1
         ip = htonl(mgmtData.ap->deviceIp.ip);
         subnet = htonl(mgmtData.ap->deviceIp.subnet);
         gateway = htonl(mgmtData.ap->deviceIp.gateway);
         dns = htonl(mgmtData.ap->deviceIp.dns);
-#else
-        ip = mgmtData.ap->deviceIp.ip;
-        subnet = mgmtData.ap->deviceIp.subnet;
-        gateway = mgmtData.ap->deviceIp.gateway;
-        dns = mgmtData.ap->deviceIp.dns;
-#endif
-
     }
+#endif
 
     clarityCC3000ApiLock();
     wlan_start(0);       
@@ -422,15 +421,6 @@ void clarityCC3000ApiUnlock(void)
 }
 
 
-#if CLARITY_PRINT_MESSAGES == FALSE
-clarityError clarityInit(Mutex * cc3000ApiMtx,
-                         clarityUnresponsiveCallback cb,
-                         clarityAccessPointInformation * accessPointConnection)
-{
-    cc3000Mtx = cc3000ApiMtx;
-    return clarityMgmtInit(accessPointConnection, cb);
-}
-#else
 
 clarityError clarityInit(Mutex * cc3000ApiMtx,
                          clarityUnresponsiveCallback cb,
@@ -438,10 +428,11 @@ clarityError clarityInit(Mutex * cc3000ApiMtx,
                          clarityPrintCb printCb)
 {
     cc3000Mtx = cc3000ApiMtx;
+#if CLARITY_PRINT_MESSAGES == TRUE
     clarityPrint = printCb;
+#endif
     return clarityMgmtInit(accessPointConnection, cb);
 }
-#endif
 
 clarityError clarityShutdown(void)
 {
