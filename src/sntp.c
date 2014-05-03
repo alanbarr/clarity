@@ -183,7 +183,12 @@ static clarityError sntpRequest(char * buf)
     return rtn;
 }
 
-
+/** @brief Retrieves SNTP time by using the CC3000.
+ *  @param[in] buf Buffer used for internal use. Needs to be at 48 bytes.
+ *  @param bufSize Size of the buffer.
+ *  @param[out] ntpSeconds Remote SNTP server timestamp.
+ *  @return Appropriate status from #clarityError. 
+ *  @todo API needs improved? Only gets remote end time so could be smarter.*/
 clarityError clarityGetSntpTime(char * buf, uint16_t bufSize,
                                 uint32_t * ntpSeconds)
 {
@@ -217,6 +222,11 @@ clarityError clarityGetSntpTime(char * buf, uint16_t bufSize,
 }
 
 
+
+/** @brief Converts a SNTP time to clarity time structure.
+ *  @param[out] clarTD Clarity structure to be populated.
+ *  @param sntp sntp time.
+ *  @return Appropriate status from #clarityError. */
 clarityError clarityTimeFromSntp(clarityTimeDate * clarTD, uint32_t sntp)
 {
     if (sntp <= NTP_UNIX_EPOCH_DIFFERENCE)
@@ -227,6 +237,10 @@ clarityError clarityTimeFromSntp(clarityTimeDate * clarTD, uint32_t sntp)
     return clarityTimeFromUnix(clarTD, sntp - NTP_UNIX_EPOCH_DIFFERENCE);
 }
 
+/** @brief Converts a UNIX time to clarity time structure.
+ *  @param[out] clarTD Clarity Time and Data structure to be populated.
+ *  @param unix UNIX time.
+ *  @return Appropriate status from #clarityError. */
 clarityError clarityTimeFromUnix(clarityTimeDate * clarTD, time_t unix)
 {
     struct tm result;
@@ -266,6 +280,10 @@ clarityError clarityTimeFromUnix(clarityTimeDate * clarTD, time_t unix)
 }
 
 
+/** @brief Converts a clarity time structure to UNIX time. 
+ *  @param[in] clarTD Clarity time structure to convert.
+ *  @param[out] unix unix time.
+ *  @return Appropriate status from #clarityError. */
 clarityError clarityTimeToUnix(clarityTimeDate * clarTD, time_t * unix)
 {
     struct tm unixBD;
@@ -300,6 +318,10 @@ clarityError clarityTimeToUnix(clarityTimeDate * clarTD, time_t * unix)
     return CLARITY_SUCCESS;
 }
 
+/** @brief Increments a clarity time strucutre by a number of seconds.
+ *  @param timeData Clarity structure to update.
+ *  @param seconds Number of seconds to increment. 
+ *  @return Appropriate status from #clarityError. */
 clarityError clarityTimeIncrement(clarityTimeDate * timeDate, uint32_t seconds)
 {
 #if 0

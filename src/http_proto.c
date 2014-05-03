@@ -120,7 +120,7 @@ static const char * getHttpVersion(const char * version,
     }
 
     /* Check for dp */
-    c++;                /* You'll find no OOP here */
+    c++;
     if (*c != '.')
     {
         CLAR_PRINT_LINE("Version DP not as expected.");
@@ -591,6 +591,7 @@ const char * httpParseResponse(clarityHttpResponseInformation * info,
         CLAR_PRINT_ERROR();
         return NULL;
     }
+    /* TODO headers and body.*/
     return dataRtnd;
 }
 

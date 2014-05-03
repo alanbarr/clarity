@@ -143,6 +143,8 @@ static msg_t cc3000HttpServerThd(void * arg)
     return CLARITY_SUCCESS;;
 }
 
+/** @brief Stops the HTTP server.
+ *  @return Appropriate status from #clarityError. */
 clarityError clarityHttpServerStop(void)
 {
     if (httpServerThd != NULL)
@@ -154,6 +156,10 @@ clarityError clarityHttpServerStop(void)
     return CLARITY_SUCCESS;
 }
 
+/** @brief Starts the HTTP server.
+ *  @param control Control structure of server information. Needs to persist
+ *                 in memory for the duration of the server's operation. 
+ *  @return Appropriate status from #clarityError. */
 clarityError clarityHttpServerStart(clarityHttpServerInformation * control)
 {
     uint16_t blockOpt = SOCK_ON;
@@ -229,8 +235,13 @@ clarityError clarityHttpServerStart(clarityHttpServerInformation * control)
     return rtn;
 }
 
-clarityError claritySendInCb(const clarityConnectionInformation * conn,
-                             const void * data, uint16_t length)
+/** @brief Transmits data from a HTTP callback.
+ *  @param[in] conn Connection information. 
+ *  @param[in] data Buffer to transmit.
+ *  @param length Length of data to transmit
+ *  @return Appropriate status from #clarityError. */
+clarityError clarityHttpServerSendInCb(const clarityConnectionInformation * conn,
+                                       const void * data, uint16_t length)
 {
     int32_t rtn;
 

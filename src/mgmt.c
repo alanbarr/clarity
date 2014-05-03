@@ -55,7 +55,7 @@ static WORKING_AREA(connectivityMonThdWorkingArea, 256);
 static Thread * connectivityMonThd = NULL;
 #endif
 
-static WORKING_AREA(responseMonThdWorkingArea, 256);
+static WORKING_AREA(responseMonThdWorkingArea, 256); /* TODO make smaller */
 static Thread * responseMonThd = NULL;
 
 static clarityUnresponsiveCallback unresponsiveCb;
@@ -149,7 +149,6 @@ static clarityError connectToWifi_mtxext(void)
 static clarityError clarityMgmtCheckNeedForConnectivty(void)
 {
     clarityError rtn = CLARITY_ERROR_UNDEFINED;
-    long statusRtn; /*XXX*/
 
     clarityMgmtMtxLock();
 
@@ -157,10 +156,13 @@ static clarityError clarityMgmtCheckNeedForConnectivty(void)
         mgmtData.activeProcesses != 0)
     {
         CLAR_PRINT_ERROR();
+#if 0
+        long statusRtn; /*XXX*/
         if (statusRtn = wlan_ioctl_statusget()) /* XXX */
         {}
         CLAR_PRINT_ERROR();
         CLAR_PRINT_LINE_ARGS("status get: %d", statusRtn);
+#endif
         rtn = connectToWifi_mtxext();
     }
 
@@ -194,31 +196,32 @@ static clarityError clarityMgmtAttemptPowerDown(void)
 static clarityError clarityMgmtAttemptActivate_mtxext(void)
 {
     clarityError rtn = CLARITY_SUCCESS;
+    /* TODO.
+     * EEPROM functions should not be used this frequently. A better 
+     * way of implementing this in software is needed OR a shell to allow
+     * the user to perform a one time setup */
+#if 0
     uint32_t ip = 0;
     uint32_t subnet = 0;
     uint32_t gateway = 0;
     uint32_t dns = 0;
+#endif
 
     if (mgmtData.active == true)
     {
         return CLARITY_SUCCESS;
     }
 
+
+#if 0
     if (mgmtData.ap->deviceIp.isStatic == true)
     {
-#if 1
         ip = htonl(mgmtData.ap->deviceIp.ip);
         subnet = htonl(mgmtData.ap->deviceIp.subnet);
         gateway = htonl(mgmtData.ap->deviceIp.gateway);
         dns = htonl(mgmtData.ap->deviceIp.dns);
-#else
-        ip = mgmtData.ap->deviceIp.ip;
-        subnet = mgmtData.ap->deviceIp.subnet;
-        gateway = mgmtData.ap->deviceIp.gateway;
-        dns = mgmtData.ap->deviceIp.dns;
-#endif
-
     }
+#endif
 
     clarityCC3000ApiLock();
     wlan_start(0);       
@@ -257,6 +260,10 @@ static clarityError clarityMgmtAttemptActivate_mtxext(void)
     return rtn;
 }
 
+/** @brief Indicates to clarity that a process is using the CC3000. 
+ *  @brief This will active the CC3000 module and connect to a network (unless 
+ *         already connected).
+ *  @return Appropriate status from #clarityError. */
 clarityError clarityRegisterProcessStarted(void)
 {
     clarityError rtn = CLARITY_ERROR_UNDEFINED;
@@ -274,6 +281,11 @@ clarityError clarityRegisterProcessStarted(void)
     return rtn;
 }
 
+
+/** @brief Indicates to clarity that a process has finished using the CC3000. 
+ *  @brief This will deactive the CC3000 module if no other process is using 
+ *         the cc3000.
+ *  @return Appropriate status from #clarityError. */
 clarityError clarityRegisterProcessFinished(void)
 {
     clarityMgmtMtxLock();
@@ -405,6 +417,7 @@ static clarityError clarityMgmtShutdown(void)
     return CLARITY_SUCCESS;
 }
 
+/** @brief Locks the CC3000 API mutex. */
 void clarityCC3000ApiLock(void)
 { 
     if (cc3000Mtx != NULL)
@@ -413,6 +426,7 @@ void clarityCC3000ApiLock(void)
     }
 }
 
+/** @brief Unlocks the CC3000 API mutex. */
 void clarityCC3000ApiUnlock(void)
 {
     if (cc3000Mtx != NULL)
@@ -422,27 +436,31 @@ void clarityCC3000ApiUnlock(void)
 }
 
 
-#if CLARITY_PRINT_MESSAGES == FALSE
-clarityError clarityInit(Mutex * cc3000ApiMtx,
-                         clarityUnresponsiveCallback cb,
-                         clarityAccessPointInformation * accessPointConnection)
-{
-    cc3000Mtx = cc3000ApiMtx;
-    return clarityMgmtInit(accessPointConnection, cb);
-}
-#else
-
+/** @brief Responsible for initialising the module.
+ *  @param cc3000ApiMtx Mutex to protect CC3000 Host Driver API Calls. Needs
+ *                      to be externally initialised.
+ *  @param cb Callback that is called when clarity determines the CC3000
+ *             has become unresponsive. 
+ *  @param accessPointConnection Information about the access point to use.
+ *  @param printCb Callback to a print function. Only called if 
+ *                 #CLARITY_PRINT_MESSAGES is TRUE.
+ *  @return Appropriate status from #clarityError. */
 clarityError clarityInit(Mutex * cc3000ApiMtx,
                          clarityUnresponsiveCallback cb,
                          clarityAccessPointInformation * accessPointConnection,
                          clarityPrintCb printCb)
 {
     cc3000Mtx = cc3000ApiMtx;
+
+#if CLARITY_PRINT_MESSAGES == TRUE
     clarityPrint = printCb;
-    return clarityMgmtInit(accessPointConnection, cb);
-}
 #endif
 
+    return clarityMgmtInit(accessPointConnection, cb);
+}
+
+/** @details Responsive for shutting down the module.
+ *  @return Appropriate status from #clarityError. */
 clarityError clarityShutdown(void)
 {
    return clarityMgmtShutdown();

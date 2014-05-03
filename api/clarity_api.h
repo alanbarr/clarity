@@ -59,6 +59,7 @@
     CLARITY_ERROR(CLARITY_ERROR_CC3000_NETAPP)      \
     CLARITY_ERROR(CLARITY_ERROR_BUFFER_SIZE)        \
     CLARITY_ERROR(CLARITY_ERROR_RANGE)              \
+    CLARITY_ERROR(CLARITY_ERROR_PARAMETER)          \
     CLARITY_ERROR(CLARITY_ERROR_STATE)
 
 #ifdef CLARITY_ERROR
@@ -115,6 +116,8 @@ typedef struct {
 typedef struct {
     clarityHttpVersion version;
     uint16_t code;
+    /*TODO pointer to headers */
+    /*TODO pointer to body */
 } clarityHttpResponseInformation;
 
 typedef struct {
@@ -198,18 +201,12 @@ typedef struct {
 /* Initialisation */
 typedef void (*clarityUnresponsiveCallback)(void);
 
-#if !defined(CLARITY_PRINT_MESSAGES) || CLARITY_PRINT_MESSAGES == FALSE
-clarityError clarityInit(Mutex * cc3000ApiMtx,
-                         clarityUnresponsiveCallback cb,
-                         clarityAccessPointInformation * accessPointConnection);
-#else
 typedef void (*clarityPrintCb)(const char * fmt, ...);
 
 clarityError clarityInit(Mutex * cc3000ApiMtx,
-                         clarityUnresponsiveCallback cb,
+                         clarityUnresponsiveCallback unrespCb,
                          clarityAccessPointInformation * accessPointConnection,
                          clarityPrintCb printCb);
-#endif
 
 clarityError clarityShutdown(void);
 
@@ -222,8 +219,8 @@ clarityError clarityRegisterProcessFinished(void);
 /* HTTP Server */
 clarityError clarityHttpServerStart(clarityHttpServerInformation * control);
 clarityError clarityHttpServerStop(void);
-clarityError claritySendInCb(const clarityConnectionInformation * conn,
-                             const void * data, uint16_t length);
+clarityError clarityHttpServerSendInCb(const clarityConnectionInformation * conn,
+                                       const void * data, uint16_t length);
 clarityError clarityHttpBuildResponseTextPlain(char * clarityBuf,
                                                uint16_t clarityBufSize,
                                                uint8_t code,
@@ -232,35 +229,42 @@ clarityError clarityHttpBuildResponseTextPlain(char * clarityBuf,
 /* HTTP Client */
 typedef struct {
     bool closeOnComplete;   /* Close persistant connection after response obtained */
+    bool pipeline;
     /* Private */
-    bool connected;       /* connection established */  
+    bool connected;         /* connection established */  
     int32_t socket;         /* open socket */
-}
-clarityHttpPersistant;
+    uint32_t requestsPipelined; /* number of pipelined messages */
+} clarityHttpConfiguration;
 
 clarityError clarityHttpSendRequest(clarityTransportInformation * transport,
-                                    clarityHttpPersistant * persistant,
+                                    clarityHttpConfiguration * config,
                                     char * buf,
                                     uint16_t bufSize,
                                     uint16_t requestSize,
                                     clarityHttpResponseInformation * response);
 
+/* manually call for requests send pipleline=true */
+clarityError clarityHttpPipelinedResponse(clarityHttpConfiguration * config,
+                                          char * buf,
+                                          uint16_t bufSize,
+                                          clarityHttpResponseInformation * response);
+
 clarityError clarityHttpBuildPost(char * buf, uint16_t bufSize,
                                   const char * device,
                                   const char * resource,
                                   const char * content, 
-                                  clarityHttpPersistant * persistant);
+                                  clarityHttpConfiguration * persistant);
 
 /* SNTP Client */
 typedef struct {
-    uint8_t hour;   /* 24 hour fmt */
+    uint8_t hour;   /* 0 - 24 */
     uint8_t minute; /* 0 - 59 */
     uint8_t second; /* 0 - 59 */
 } clarityTime;
 
 typedef struct {
-    uint8_t year;   /* e.g. 2000 */
-    uint8_t month;  /* 1 (Jan) - 12 (Dec) */
+    uint8_t year;   /* 0 - 99 (tens)*/
+    uint8_t month;  /* 1 (Ja) - 12 (Dec) */
     uint8_t date;   /* 1 - 31 */
     uint8_t day;    /* 1 (Mon) - 7 (Sun)*/
 } clarityDate;
