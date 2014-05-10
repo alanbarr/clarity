@@ -81,12 +81,12 @@ int32_t httpHandle(clarityHttpRequestInformation * info,
 
     if (true != getResource(control, &info->resource, &resInfo))
     {
-
+        CLAR_PRINT_ERROR();
     }
 
     else if (true != getMethod(resInfo, info->type, &methInfo))
     {
-
+        CLAR_PRINT_ERROR();
     }
 
     else
@@ -94,6 +94,10 @@ int32_t httpHandle(clarityHttpRequestInformation * info,
         if (methInfo->callback != NULL)
         {
             methInfo->callback(info, user);
+        }
+        else
+        {
+            CLAR_PRINT_ERROR();
         }
 
         return true;
