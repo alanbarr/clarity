@@ -112,11 +112,13 @@ const char * httpRequestProcess(clarityHttpServerInformation * control,
     
     if (NULL == (rtnd = httpParseRequest(http, data, size)))
     {
+        CLAR_PRINT_ERROR();
         return NULL;
     }
 
     else if (httpHandle(http, control, connection) != true)
     {
+        CLAR_PRINT_ERROR();
         return NULL;
     }
 

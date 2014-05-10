@@ -33,6 +33,7 @@
 #include "clarity_int.h"
 
 #define HTTP_PORT 80
+#define SERVER_SLEEP_MS 200
 
 static WORKING_AREA(httpWorkingArea, 1024);
 
@@ -56,7 +57,6 @@ static msg_t cc3000HttpServerThd(void * arg)
     while (chThdShouldTerminate() == FALSE)
     {
         uint32_t timeout = 5000; /* ms */
-        CLAR_PRINT_LINE("Server: top of while 1");
 
         memset(&acceptedAddr, 0, sizeof(acceptedAddr));
         memset(rxBuf, 0, sizeof(rxBuf));
@@ -75,7 +75,7 @@ static msg_t cc3000HttpServerThd(void * arg)
                 }
                 else
                 {
-                    chThdSleep(MS2ST(1000));
+                    chThdSleep(MS2ST(SERVER_SLEEP_MS));
                 }
             }
 
@@ -125,7 +125,7 @@ static msg_t cc3000HttpServerThd(void * arg)
             }
             clarityCC3000ApiUnlock();
         }
-        chThdSleep(MS2ST(1000));
+        chThdSleep(MS2ST(SERVER_SLEEP_MS));
     }
 
     clarityCC3000ApiLock();

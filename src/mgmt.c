@@ -381,12 +381,11 @@ static clarityError clarityMgmtInit(clarityAccessPointInformation * apInfo,
 
 static clarityError clarityMgmtShutdown(void)
 {
+
     if (mgmtData.activeProcesses != 0)
     {
         return CLARITY_ERROR_STATE;
     }
-
-    clarityHttpServerStop();
 
 #if 0
     clarityMgmtMtxLock();
